@@ -112,58 +112,77 @@ setup_config() {
     sed -i 's/"dev:frontend": "vite"/"dev:frontend": "vite --host"/' package.json
     
     # 修改 docker-compose.yml
-    sed -i '/volumes:/,/networks:/c\    volumes:\n      - ./.vscode:/usr/src/app/.vscode\n      - ./assets:/usr/src/app/assets\n      - ./convex:/usr/src/app/convex\n      - ./data:/usr/src/app/data\n      - ./public:/usr/src/app/public\n      - ./src:/usr/src/app/src\n      - ./package.json:/usr/src/app/package.json\n      - ./README.md:/usr/src/app/README.md\n    networks:' docker-compose.yml
+    sed -i '/volumes:/,/networks:/c\    volumes:\n      - ./.vscode:/usr/src/app/.vscode\n      - ./assets:/usr/src/app/assets\n      - ./convex:/usr/src/app/convex\n      - ./data:/usr/src/app/data\n      - ./public:/usr/src/app/public\n      - ./src:/usr/src/app/src\n      - ./package.json:/usr/src/app/package.json\n      - ./README.md:/usr/src/app/README.md\n      - convex_data:/usr/src/app/convex-local-storage\n    networks:' docker-compose.yml
+    
+    # 添加 volumes 定义
+    if ! grep -q "^volumes:" docker-compose.yml; then
+        echo -e "\nvolumes:\n  convex_data:" >> docker-compose.yml
+    fi
     
     # 修改 llm.ts 中的配置
-    # 1. 去除 Ollama 配置后的 */
     sed -i '/\/\* Ollama (local) config:/!b;n;/\*\//d' ./convex/util/llm.ts
-    
-    # 2. 检查并在 OpenAI config: 后添加 */ （如果不存在）
     if ! grep -A 1 "\/\* OpenAI config:" ./convex/util/llm.ts | grep -q "  \*/"; then
         sed -i '/\/\* OpenAI config:/a\  */' ./convex/util/llm.ts
     fi
-    
-    # 3. 去除 apiKey 行后的 */
     sed -i '/apiKey: () => process.env.OPENAI_API_KEY/!b;n;/\*\//d' ./convex/util/llm.ts
 }
 
-
-# 启动服务
+ #启动服务
 start_services() {
     print_step "Starting services..."
-    
+   
+    # 清理 ai-town 相关的容器和镜像
+    print_step "Cleaning up ai-town containers and images..."
+    docker compose down
+    docker rm -f $(docker ps -a -q --filter ancestor=ai-town-ai-town) 2>/dev/null || true
+    docker rmi ai-town-ai-town 2>/dev/null || true
+   
     # 启动容器并等待
+    print_step "Starting container..."
     docker compose up --build -d
     if ! wait_for_service "Docker container" "docker compose exec ai-town echo 'Container is ready'" 120; then
         print_error "Container failed to start"
         exit 1
     fi
-    
-    # 提示用户在当前终端运行前端
-    print_step "Container is ready!"
-    echo "In this terminal, run:"
-    echo "docker compose exec ai-town npm run dev:frontend"
+
+    # 安装 Convex local backend
+    print_step "Installing Convex backend..."
+    docker compose exec ai-town bash -c 'curl -L -O https://github.com/get-convex/convex-backend/releases/download/precompiled-2024-06-28-91981ab/convex-local-backend-x86_64-unknown-linux-gnu.zip && \
+        unzip convex-local-backend-x86_64-unknown-linux-gnu.zip && \
+        rm convex-local-backend-x86_64-unknown-linux-gnu.zip && \
+        chmod +x convex-local-backend'
+   
+    # 等待 convex-local-backend 安装完成
+    if ! wait_for_service "Convex backend" "docker compose exec ai-town test -f convex-local-backend" 60; then
+        print_error "Convex backend installation failed"
+        exit 1
+    fi
+
+    # 安装 sqlite3
+    print_step "Installing SQLite3..."
+    docker compose exec ai-town bash -c 'apt-get update && apt-get install -y sqlite3'
+
+    print_success "Environment setup completed!"
 }
 
-# 设置后端指引
-setup_backend_guide() {
+# 设置指引
+setup_guide() {
     print_step "Backend Setup Guide"
-    echo "Please open a new terminal and follow these steps:"
+    echo "Please follow these steps in separate terminals:"
     echo ""
-    echo "1. Enter the container:"
+    echo "1. Terminal 1 - Run convex local backend:"
     echo "   docker compose exec ai-town /bin/bash"
+    echo "   ./convex-local-backend"
     echo ""
-    echo "2. Run Convex development server:"
+    echo "2. Terminal 2 - Setup Convex and start frontend:"
+    echo "   docker compose exec ai-town /bin/bash"
     echo "   just convex dev"
-    echo "3. After authentication is complete:"
-    echo "   - Press Ctrl+C"
-    echo "   - Set your OpenAI API key:"
-    echo "     just convex env set LLM_API_KEY your_openai_api_key"
+    echo "   # After completion, press Ctrl+C"
+    echo "   just convex env set LLM_API_KEY your_openai_api_key"
+    echo "   npm run dev:frontend"
     echo ""
-    echo "   - Unset Ollama host:"
-    echo "     just convex env unset OLLAMA_HOST"
-    echo ""
-    echo "4. Start the backend service:"
+    echo "2. Terminal 3 - Start backend service:"
+    echo "   docker compose exec ai-town /bin/bash"
     echo "   npm run dev:backend"
 }
 
@@ -193,11 +212,10 @@ main() {
     start_services
     
     # 显示后端设置指引
-    setup_backend_guide
+    setup_guide
     
     print_success "Setup completed!"
-    echo "Frontend service is starting..."
-    echo "Please follow the backend setup guide in a new terminal"
+    echo "Please follow the setup guide in a new terminal"
 }
 
 # 运行主函数

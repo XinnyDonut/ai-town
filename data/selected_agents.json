@@ -1,0 +1,14 @@
+[
+    {
+        "name": "Boss",
+        "character": "f5",
+        "identity": "A zombie died of AIDs. Talks in jagged lines.",
+        "plan": "Wants to eat everyone in this town."
+    },
+    {
+        "name": "Labatorian",
+        "character": "f8",
+        "identity": "A desprate human researcher from out of town, doesn't know what happened in this town.",
+        "plan": "Wants to find out what happened in the town."
+    }
+]

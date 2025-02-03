@@ -15,9 +15,13 @@ services:
       - ./src:/usr/src/app/src
       - ./package.json:/usr/src/app/package.json
       - ./README.md:/usr/src/app/README.md
+      - convex_data:/usr/src/app/convex-local-storage
     networks:
       - ai-town-network
 
 networks:
   ai-town-network:
     driver: bridge
+
+volumes:
+  convex_data:

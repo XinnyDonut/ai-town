@@ -41,20 +41,61 @@ import { data as f8SpritesheetData } from './spritesheets/f8';
 
 // export { Descriptions };
 
-import { useQuery } from "convex/react";
+// /data/characters.ts
 import { api } from "../convex/_generated/api";
+import { Doc } from "../convex/_generated/dataModel";
 
-export function useDescriptions() {
-    const selected = useQuery(api.getSelectedAgents) || null;
-    const allAgents = useQuery(api.getAgents) || [];
-
-    if (!selected) return [];
-
-    return selected.agentIds
-        .map(id => allAgents.find(agent => agent._id === id))
-        .filter(Boolean); // 过滤掉 undefined
+/** 前端/游戏中需要的 agent 描述结构 */
+export interface AgentDescription {
+  name: string;
+  character: string;
+  identity: string;
+  plan: string;
 }
 
+/** 用于给游戏层读取（或全局共享） */
+export let Descriptions: AgentDescription[] = [];
+
+/**
+ * 从数据库中拉取 agents + selectedAgents，
+ * 把「选中的」那部分映射成 Descriptions，
+ * 存到全局的 Descriptions 变量里。
+ */
+export async function updateDescriptions() {
+  try {
+    // 1) 拿到 “当前选中的 agents” id 列表
+    const selectedAgentsData = await api.customizeAgents.getSelectedAgents();
+    if (!selectedAgentsData) {
+      // 如果没有任何选中的，就清空
+      Descriptions = [];
+      return;
+    }
+
+    // 2) 拉取所有 agents
+    const agents = await api.customizeAgents.getAgents();
+    if (!agents) {
+      Descriptions = [];
+      return;
+    }
+
+    // 3) 只保留在 selectedAgentsData.agentIds 里的那部分
+    const selectedAgents = agents.filter((agent: Doc<"agents">) =>
+      selectedAgentsData.agentIds.includes(agent._id)
+    );
+
+    // 4) 映射成你的前端需要的结构
+    Descriptions = selectedAgents.map((agent: Doc<"agents">) => ({
+      name: agent.name,
+      character: agent.character,
+      identity: agent.identity,
+      plan: agent.plan,
+    }));
+
+    console.log("Descriptions updated:", Descriptions);
+  } catch (error) {
+    console.error("Error updating descriptions:", error);
+  }
+}
 
 
 export const characters = [
@@ -110,3 +151,20 @@ export const characters = [
 
 // Characters move at 0.75 tiles per second.
 export const movementSpeed = 0.75;
+
+
+// // test 
+// const createAgent = useMutation(api.createAgent);
+// createAgent({ 
+//     name: "TestAgent1", 
+//     character: "f1", 
+//     identity: "A test character", 
+//     plan: "To exist in AI town"
+// });
+// createAgent({ 
+//     name: "TestAgent2", 
+//     character: "f2", 
+//     identity: "Another test character", 
+//     plan: "To interact with others"
+// });
+// export const Descriptions = useQuery(api.getSelectedAgents) || [];

@@ -16,9 +16,13 @@ import InteractButton from './components/buttons/InteractButton.tsx';
 import FreezeButton from './components/FreezeButton.tsx';
 import { MAX_HUMAN_PLAYERS } from '../convex/constants.ts';
 import PoweredByConvex from './components/PoweredByConvex.tsx';
+import { EditCharacter } from "./components/character-editor/EditCharacter";
+
 
 export default function Home() {
   const [helpModalOpen, setHelpModalOpen] = useState(false);
+
+  const [showEditor, setShowEditor] = useState(false);
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-between font-body game-background">
       <PoweredByConvex />
@@ -99,6 +103,18 @@ export default function Home() {
             <Button imgUrl={helpImg} onClick={() => setHelpModalOpen(true)}>
               Help
             </Button>
+ 
+ 
+
+            <Button
+            onClick={() => setShowEditor(true)}
+          >
+            Edit
+          </Button>
+
+
+
+
           </div>
           <a href="https://a16z.com">
             <img className="w-8 h-8 pointer-events-auto" src={a16zImg} alt="a16z" />
@@ -108,6 +124,19 @@ export default function Home() {
           </a>
         </footer>
         <ToastContainer position="bottom-right" autoClose={2000} closeOnClick theme="dark" />
+
+        {showEditor && (
+        <EditCharacter
+          selectedCharacter={null}
+          setSelectedCharacter={(id) => {
+            console.log("setSelectedCharacter called with:", id);
+          }}
+          onBack={() => setShowEditor(false)}  // “Back”时关闭
+          onNext={() => console.log("onNext clicked")}
+        />
+      )}
+
+      
       </div>
     </main>
   );

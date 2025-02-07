@@ -25,14 +25,14 @@ type SelectMusicProps = {
 export const SelectMusic: React.FC<SelectMusicProps> = ({ selectedMusic, setSelectedMusic, onBack, onSave }) => {
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
 
-  // Stop any background music when component mounts
+  // when enter the music selection page, stops any music.
   useEffect(() => {
     if (sound.exists("background")) {
       sound.stop("background");
     }
     
     return () => {
-      // Cleanup preview audio when component unmounts
+      //when leaving the music selection page, stop any music
       if (audio) {
         audio.pause();
         audio.currentTime = 0;
@@ -56,7 +56,7 @@ export const SelectMusic: React.FC<SelectMusicProps> = ({ selectedMusic, setSele
 
 
   const handleSave = () => {
-    // Stop preview audio before saving
+    // Stop audio when saving
     if (audio) {
       audio.pause();
       audio.currentTime = 0;
@@ -65,7 +65,7 @@ export const SelectMusic: React.FC<SelectMusicProps> = ({ selectedMusic, setSele
   };
 
   const handleBack = () => {
-    // Stop preview audio before going back
+    // Stop audio when going back
     if (audio) {
       audio.pause();
       audio.currentTime = 0;

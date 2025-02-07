@@ -7,6 +7,7 @@ import { StepProgress } from "./components/StepProgress/StepProgress"
 import { useMutation,useQuery } from "convex/react"
 import mapConfig from "../../data/maps/mapConfig";
 import{ api }from "../../convex/_generated/api"
+import { useNavigate } from 'react-router-dom';
 import "./styles/global.css"
 
 
@@ -21,6 +22,7 @@ function ConfigPage() {
   const [selectedMap, setSelectedMap] = useState<string | undefined>(mapConfig.defaultMap)
   const [selectedCharacter, setSelectedCharacter] = useState<number | null>(null)
   const [selectedMusic, setSelectedMusic] = useState<number | null>(null)
+  const nav = useNavigate();
 
   const steps = ["Select Map", "Edit Character", "Select Music"]
 
@@ -51,18 +53,6 @@ function ConfigPage() {
     }
   }
 
-  // Yuna's handle save doesn't do much, only here to send alert
-  const YunaHandleSave = () => {
-    if (selectedMap && selectedCharacter && selectedMusic) {
-      // Note: In a real application, you would save the game setup to the backend
-      // updateGameSetup({ mapId: selectedMap, characterId: selectedCharacter, musicId: selectedMusic })
-      alert(`Saved! Map: ${selectedMap}, Character: ${selectedCharacter}, Music: ${selectedMusic}`)
-    } else {
-      alert("Please complete all selections before saving!")
-    }
-  }
-
-
   const resetWorld=useMutation(api.testing.resetWorldForNewMap)
   const initWorld=useMutation(api.init.default)
   const resumeWorld = useMutation(api.testing.resume);
@@ -86,8 +76,9 @@ function ConfigPage() {
         };
   
         localStorage.setItem("selectedMusic", JSON.stringify(storedMusic));
-  
         alert(`Save successful: Map and Music updated.\nMusic: music${selectedMusic}.mp3`);
+
+        nav('/');
       } else {
         alert("Save successful: Map updated. No music selected.");
       }

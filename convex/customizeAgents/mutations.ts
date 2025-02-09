@@ -3,6 +3,9 @@ import { mutation } from "../_generated/server";
 import { MutationCtx } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
 import { insertInput } from "../aiTown/insertInput";
+import { v } from "convex/values";
+import { Character } from "@/components/Character";
+
 
 export const createAgent = mutation({
  handler: async (ctx: MutationCtx, args: { 
@@ -65,6 +68,26 @@ export const removeAgentFromWorld = mutation({
    });
  },
 });
+
+
+export const saveTemplate =mutation ({
+  args:{
+    name:v.string(),
+    agents:v.array(v.object({
+      name:v.string(),
+      character:v.string(),
+      identity:v.string(),
+      plan:v.string()
+    }))
+  },
+  handler: async (ctx, args)=>{
+    await ctx.db.insert('agentTemplates',{
+      name:args.name,
+      agents:args.agents,
+      createAt:Date.now()
+    })
+  }
+})
 
 // //事件逻辑
 

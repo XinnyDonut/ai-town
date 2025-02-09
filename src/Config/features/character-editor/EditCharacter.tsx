@@ -5,6 +5,8 @@ import "./EditCharacter.css"
 import { MultiSelectModal } from "./MultiSelectModal"
 import { SpriteSelectionModal } from "./SpriteSelectionModal"
 import { updateDescriptions } from "../../../../data/characters";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 
 
 // Note: In a real application, you would import API functions from a separate file
@@ -26,9 +28,6 @@ type EditCharacterProps = {
   onNext: () => void
 }
 
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
-
 export const EditCharacter: React.FC<EditCharacterProps> = ({
   selectedCharacter,
   setSelectedCharacter,
@@ -38,7 +37,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
 
   const agentDocs = useQuery(api["customizeAgents/queries"].getAgents) ?? []; //must do this. Convex thing. hate it.
   const predefinedCharacters = agentDocs.map((doc) => ({
-  id: doc._id.id,
+  id: doc._id,
   name: doc.name,
   description: doc.identity,
   goals: doc.plan,

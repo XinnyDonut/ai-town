@@ -118,6 +118,25 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
 
   // determine if Next button should be enabled--only able the btn when there is at least one agent added to the world
   const isNextEnabled = addedToWorld && selectedCharacters.length > 0
+
+  //when deleting character from the thumbnail, both state and database will update
+  const handleRemoveCharacter = async (id: string) => {
+    try {
+      // remove from selected characters state
+      setSelectedCharacters((prev) => prev.filter((charId) => charId !== id))
+      
+      // remove from database
+      await deleteAgentMutation({ id })
+
+      // If no characters left, reset addedToWorld
+      if (selectedCharacters.length <= 1) {
+        setAddedToWorld(false)
+      }
+    } catch (error) {
+      console.error('Error removing character:', error)
+      alert('Failed to remove character. Please try again.')
+    }
+  }
   
   const handleSave = async () => {
     if (!editingCharacter) return;
@@ -166,11 +185,9 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   const renderCharacterForm = () => (
     <div className="character-details">  
       <div className="list-actions">
-      {/**here is the part where added the templateModal rendering**/}
         <button className="pixel-btn" onClick={() => setShowTemplateLoadModal(true)}>
           Load Saved Template
         </button>
-      {/*****/}
         <button className="pixel-btn" onClick={() => setIsCreating(true)}>
           Create Agent
         </button>
@@ -333,7 +350,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
               <img src={character?.preview || "/placeholder.svg"} alt={character?.name} className="thumbnail-image" />
               <button
                 className="remove-thumbnail"
-                onClick={() => setSelectedCharacters((prev) => prev.filter((charId) => charId !== id))}
+                onClick={() => handleRemoveCharacter(id)}
               >
                 <X size={16} />
               </button>

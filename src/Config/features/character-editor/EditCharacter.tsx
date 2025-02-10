@@ -10,9 +10,6 @@ import { api } from "../../../../convex/_generated/api";
 import { AgentTemplateLoadModal } from './AgentTemplateLoadModal';
 
 
-// Note: In a real application, you would import API functions from a separate file
-// import { fetchCharacters, createCharacter, updateCharacter, deleteCharacter } from '../api/characters'
-
 type Character = {
   id: string //convex db id must be string
   name: string //name is name
@@ -54,17 +51,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([])
   const [showSpriteModal, setShowSpriteModal] = useState(false)
   const [showTemplateLoadModal, setShowTemplateLoadModal] = useState(false)
-
-  // Note: In a real application, you would fetch characters from the backend when the component mounts
-  // useEffect(() => {
-  //   const loadCharacters = async () => {
-  //     const characters = await fetchCharacters()
-  //     // Update the state with fetched characters
-  //   }
-  //   loadCharacters()
-  // }, [])
-
-  
+  const [addedToWorld, setAddedToWorld] = useState<boolean>(false);
 
   const handleImageUpload = () => {
     setShowSpriteModal(true)
@@ -86,27 +73,51 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   
   const handleLoadTemplate = async (template: Template) => {
     try {
-      // Clear existing agents
+      //When load template, clear any existing agents
       await Promise.all(
         agentDocs.map(agent => deleteAgentMutation({ id: agent._id }))
       );
   
-      // Create new agents
+      // Then create new agents with the agent in templates
       const createdAgents = await Promise.all(
         template.agents.map(agent => createAgentMutation(agent))
       );
-  
-      // If at least one agent was created, select the first one
-      if (createdAgents.length > 0) {
-        setSelectedCharacter(createdAgents[0]); // Or however we're tracking selected character
-      }
-  
+      
+      //though now, we haven't select any agents to acutally add to the world, we are simply loading the template for user to see
+      setAddedToWorld(false)
+      setSelectedCharacters([])
       setShowTemplateLoadModal(false);
+    
     } catch (error) {
       console.error('Error loading template:', error);
       alert('Failed to load template. Please try again.');
     }
   };
+
+  //this is the function that actually decide which agents to add to the world, when click the save selection btn on add to world
+  const handleMultiSelectSave = async () => {
+    if (selectedCharacters.length === 0) return
+
+    try {
+      // Delete all agents that are not selected
+      const agentsToDelete = agentDocs
+        .filter(agent => !selectedCharacters.includes(agent._id))
+        .map(agent => agent._id)
+
+      await Promise.all(
+        agentsToDelete.map(id => deleteAgentMutation({ id }))
+      )
+
+      setShowMultiSelectModal(false)
+      setAddedToWorld(true)
+    } catch (error) {
+      console.error('Error saving selection:', error)
+      alert('Failed to save selection. Please try again.')
+    }
+  }
+
+  // determine if Next button should be enabled--only able the btn when there is at least one agent added to the world
+  const isNextEnabled = addedToWorld && selectedCharacters.length > 0
   
   const handleSave = async () => {
     if (!editingCharacter) return;
@@ -153,12 +164,13 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   const currentCharacter = predefinedCharacters.find((char) => char.id === selectedCharacter)
 
   const renderCharacterForm = () => (
-    <div className="character-details">
-      {/*****/}
+    <div className="character-details">  
       <div className="list-actions">
+      {/**here is the part where added the templateModal rendering**/}
         <button className="pixel-btn" onClick={() => setShowTemplateLoadModal(true)}>
-          Load Template
+          Load Saved Template
         </button>
+      {/*****/}
         <button className="pixel-btn" onClick={() => setIsCreating(true)}>
           Create Agent
         </button>
@@ -166,7 +178,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
           Add to World
         </button>
       </div>
-      {/*****/}
+      
       <div className="character-header">
         <input
           type="text"
@@ -269,7 +281,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     <div className="character-list-container">
       <div className="list-actions">
       <button className="pixel-btn" onClick={() => setShowTemplateLoadModal(true)}>
-          Load Template
+          Load Saved Template
         </button>
         <button
           className="pixel-btn"
@@ -370,12 +382,9 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
           onClose={() => {
             setShowMultiSelectModal(false)
             setSelectedCharacters([])
+            setAddedToWorld(false)
           }}
-          onSave={() => {
-            setShowMultiSelectModal(false)
-            // Here you would typically do something with the selected characters
-            console.log("Selected characters:", selectedCharacters)
-          }}
+          onSave={handleMultiSelectSave}//here in "ADD TO WORLD" when you click save selection, the agents will be added to world
         />
       )}
       {showSpriteModal && (

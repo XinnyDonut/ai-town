@@ -1,10 +1,11 @@
 import type React from "react"
-import { Check, X } from "lucide-react"// what is this for?
+import { Check, X } from "lucide-react"// 
 import "./MultiSelectModal.css"
 import { useMutation } from "convex/react"
 import { api } from "../../../../convex/_generated/api";
 
-
+//this Modal is the Modal when you click "ADD TO WORLD" on the UI, 
+//it handles save template and select agents that will be add to actually add to the world:)
 type Character = {
   id: string
   name: string
@@ -29,11 +30,12 @@ export const MultiSelectModal: React.FC<MultiSelectModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const saveTemplateMutation= useMutation(api["customizeAgents/mutations"].saveTemplate)
+  const saveTemplateMutation= useMutation(api["customizeAgents/mutations"].saveTemplate) 
 
+  // in add to the world, user can save template
   const handleSaveWithTemplate =async () => {
     if (selectedCharacters.length === 0) return;
-    const name = window.prompt("Enter template name (optional)");
+    const name = window.prompt("Enter template name");
     if (name === null) return; 
 
     console.log("Characters:", characters);
@@ -56,10 +58,9 @@ export const MultiSelectModal: React.FC<MultiSelectModalProps> = ({
       console.log("Mapped agents:", selectAgents);
     try {
       await saveTemplateMutation({
-        name:name||`Template ${new Date().toLocaleString()}`,
+        name:name,
         agents:selectAgents,
       })
-      onSave()
     }catch(error){
       console.error("Failed to save Template",error)
     }
@@ -90,9 +91,14 @@ export const MultiSelectModal: React.FC<MultiSelectModalProps> = ({
           <button className="pixel-btn" onClick={onClose}>
             Cancel
           </button>
+          {/* handleSaveWithTemplate let user save template in this Modal*/}
           <button className="pixel-btn" onClick={handleSaveWithTemplate} disabled={selectedCharacters.length === 0}>
-            Save Selection
+            Save Template
           </button>
+          {/* onSave handles which agents get actually added to the world, it's passed in EditCharacter*/}
+          <button className="pixel-btn" onClick={onSave} disabled={selectedCharacters.length === 0}>
+            Save Selection
+          </button>  
         </div>
       </div>
     </div>

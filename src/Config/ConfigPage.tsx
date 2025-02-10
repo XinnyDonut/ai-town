@@ -10,11 +10,6 @@ import{ api }from "../../convex/_generated/api"
 import { useNavigate } from 'react-router-dom';
 import "./styles/global.css"
 
-
-
-// Note: In a real application, you would import API functions from a separate file
-// import { fetchGameSetup, updateGameSetup } from './api/gameSetup'
-
 type Page = "selectMap" | "editCharacter" | "selectMusic"
 
 function ConfigPage() {
@@ -22,6 +17,7 @@ function ConfigPage() {
   const [selectedMap, setSelectedMap] = useState<string | undefined>(mapConfig.defaultMap)
   const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null)
   const [selectedMusic, setSelectedMusic] = useState<string | null>(null)
+  const agentDocs = useQuery(api["customizeAgents/queries"].getAgents) ?? []
   const nav = useNavigate();
 
   const steps = ["Select Map", "Edit Character", "Select Music"]
@@ -56,13 +52,13 @@ function ConfigPage() {
   const resetWorld=useMutation(api.testing.resetWorldForNewMap)
   const initWorld=useMutation(api.init.default)
   const resumeWorld = useMutation(api.testing.resume);
-  
-  //handle save now only handles map selection. Add more handler for character and music
+ 
   const handleSave = async () => {
     try {
       await resetWorld();
       await initWorld({
-        numAgents: undefined,
+        // numAgents: undefined,
+        numAgents: agentDocs.length, //only initialize the world with the amount of agent ins the doc, a double save 
         mapId: selectedMap
       });
   

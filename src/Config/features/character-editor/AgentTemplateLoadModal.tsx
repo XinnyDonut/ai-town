@@ -1,8 +1,6 @@
-
-// AgentTemplateLoadModal.tsx
 import type React from "react"
-import { X } from "lucide-react" // Add this import
-import { useQuery, useMutation } from "convex/react"
+import { X } from "lucide-react" 
+import { useQuery } from "convex/react"
 import { api } from "../../../../convex/_generated/api"
 import "./AgentTemplateLoadModal.css"
 import {useState} from 'react'
@@ -27,7 +25,7 @@ export const AgentTemplateLoadModal: React.FC<AgentTemplateLoadModalProps> = ({
   onClose,
   onLoadTemplate
 }) => {
-  const templates = useQuery(api["customizeAgents/queries"].getRecentTemplates)
+  const templates = useQuery(api["customizeAgents/queries"].getRecentTemplates) //useQuery to get all the saved templates
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
 
   const TemplatePreview = ({ template }: { template: Template }) => (

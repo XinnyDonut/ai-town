@@ -7,6 +7,7 @@ import { SpriteSelectionModal } from "./SpriteSelectionModal"
 import { updateDescriptions } from "../../../../data/characters";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
+import { AgentTemplateLoadModal } from './AgentTemplateLoadModal';
 
 
 // Note: In a real application, you would import API functions from a separate file
@@ -34,7 +35,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   onBack,
   onNext,
 }) => {
-
+  
   const agentDocs = useQuery(api["customizeAgents/queries"].getAgents) ?? []; //must do this. Convex thing. hate it.
   const predefinedCharacters = agentDocs.map((doc) => ({
   id: doc._id,
@@ -52,6 +53,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   const [showMultiSelectModal, setShowMultiSelectModal] = useState(false)
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([])
   const [showSpriteModal, setShowSpriteModal] = useState(false)
+  const [showTemplateLoadModal, setShowTemplateLoadModal] = useState(false)
 
   // Note: In a real application, you would fetch characters from the backend when the component mounts
   // useEffect(() => {
@@ -61,6 +63,8 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   //   }
   //   loadCharacters()
   // }, [])
+
+  
 
   const handleImageUpload = () => {
     setShowSpriteModal(true)
@@ -78,12 +82,37 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
 
   const createAgentMutation = useMutation(api["customizeAgents/mutations"].createAgent); //I want to mutate too. Damn.
   const updateAgentMutation = useMutation(api["customizeAgents/mutations"].updateAgent); //doesn't like my docker environment. Hate it more.
+  const deleteAgentMutation =useMutation(api["customizeAgents/mutations"].deleteAgent);
+  
+  const handleLoadTemplate = async (template: Template) => {
+    try {
+      // Clear existing agents
+      await Promise.all(
+        agentDocs.map(agent => deleteAgentMutation({ id: agent._id }))
+      );
+  
+      // Create new agents
+      const createdAgents = await Promise.all(
+        template.agents.map(agent => createAgentMutation(agent))
+      );
+  
+      // If at least one agent was created, select the first one
+      if (createdAgents.length > 0) {
+        setSelectedCharacter(createdAgents[0]); // Or however we're tracking selected character
+      }
+  
+      setShowTemplateLoadModal(false);
+    } catch (error) {
+      console.error('Error loading template:', error);
+      alert('Failed to load template. Please try again.');
+    }
+  };
   
   const handleSave = async () => {
     if (!editingCharacter) return;
   
     //判断新建还是eedit
-    const existing = agentDocs.find((doc) => doc._id.id === editingCharacter.id);
+    const existing = agentDocs.find((doc) => doc._id === editingCharacter.id);
     if (!existing) {
       // 新建
       await createAgentMutation({
@@ -125,6 +154,19 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
 
   const renderCharacterForm = () => (
     <div className="character-details">
+      {/*****/}
+      <div className="list-actions">
+        <button className="pixel-btn" onClick={() => setShowTemplateLoadModal(true)}>
+          Load Template
+        </button>
+        <button className="pixel-btn" onClick={() => setIsCreating(true)}>
+          Create Agent
+        </button>
+        <button className="pixel-btn" onClick={() => setShowMultiSelectModal(true)}>
+          Add to World
+        </button>
+      </div>
+      {/*****/}
       <div className="character-header">
         <input
           type="text"
@@ -226,6 +268,9 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   const renderCharacterList = () => (
     <div className="character-list-container">
       <div className="list-actions">
+      <button className="pixel-btn" onClick={() => setShowTemplateLoadModal(true)}>
+          Load Template
+        </button>
         <button
           className="pixel-btn"
           onClick={() => {
@@ -305,6 +350,14 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
           Next
         </button>
       </div>
+      {/*******/}
+      {showTemplateLoadModal && (
+        <AgentTemplateLoadModal
+          onClose={() => setShowTemplateLoadModal(false)}
+          onLoadTemplate={handleLoadTemplate}
+        />
+      )}
+      {/*******/}
       {showMultiSelectModal && (
         <MultiSelectModal
           characters={predefinedCharacters}

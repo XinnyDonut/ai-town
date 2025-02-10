@@ -1,11 +1,17 @@
 import type React from "react"
-import { Check, X } from "lucide-react"
+import { Check, X } from "lucide-react"// what is this for?
 import "./MultiSelectModal.css"
+import { useMutation } from "convex/react"
+import { api } from "../../../../convex/_generated/api";
+
 
 type Character = {
   id: string
   name: string
   preview: string
+  description: string
+  goals: string
+  character: string
 }
 
 type MultiSelectModalProps = {
@@ -23,6 +29,41 @@ export const MultiSelectModal: React.FC<MultiSelectModalProps> = ({
   onClose,
   onSave,
 }) => {
+  const saveTemplateMutation= useMutation(api["customizeAgents/mutations"].saveTemplate)
+
+  const handleSaveWithTemplate =async () => {
+    if (selectedCharacters.length === 0) return;
+    const name = window.prompt("Enter template name (optional)");
+    if (name === null) return; 
+
+    console.log("Characters:", characters);
+    console.log("Selected IDs:", selectedCharacters);
+
+    const selectAgents =characters
+      .filter(char=>selectedCharacters.includes(char.id))
+      .map(char=>{
+        console.log("Character being mapped:", char);
+        const spriteCharacter = char.preview
+        .replace("/sprites/", "")
+        .replace(".png", "");
+        return{
+          name:char.name,
+          character:spriteCharacter,
+          identity:char.description,
+          plan:char.goals,
+          }
+      })
+      console.log("Mapped agents:", selectAgents);
+    try {
+      await saveTemplateMutation({
+        name:name||`Template ${new Date().toLocaleString()}`,
+        agents:selectAgents,
+      })
+      onSave()
+    }catch(error){
+      console.error("Failed to save Template",error)
+    }
+  }
   return (
     <div className="modal-overlay">
       <div className="modal-content">
@@ -49,7 +90,7 @@ export const MultiSelectModal: React.FC<MultiSelectModalProps> = ({
           <button className="pixel-btn" onClick={onClose}>
             Cancel
           </button>
-          <button className="pixel-btn" onClick={onSave} disabled={selectedCharacters.length === 0}>
+          <button className="pixel-btn" onClick={handleSaveWithTemplate} disabled={selectedCharacters.length === 0}>
             Save Selection
           </button>
         </div>

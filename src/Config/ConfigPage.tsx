@@ -20,8 +20,8 @@ type Page = "selectMap" | "editCharacter" | "selectMusic"
 function ConfigPage() {
   const [currentPage, setCurrentPage] = useState<Page>("selectMap")
   const [selectedMap, setSelectedMap] = useState<string | undefined>(mapConfig.defaultMap)
-  const [selectedCharacter, setSelectedCharacter] = useState<number | null>(null)
-  const [selectedMusic, setSelectedMusic] = useState<number | null>(null)
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null)
+  const [selectedMusic, setSelectedMusic] = useState<string | null>(null)
   const nav = useNavigate();
 
   const steps = ["Select Map", "Edit Character", "Select Music"]

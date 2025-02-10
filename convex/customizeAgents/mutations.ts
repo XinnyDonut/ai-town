@@ -78,13 +78,13 @@ export const saveTemplate =mutation ({
       character:v.string(),
       identity:v.string(),
       plan:v.string()
-    }))
+    })),    
   },
   handler: async (ctx, args)=>{
     await ctx.db.insert('agentTemplates',{
       name:args.name,
       agents:args.agents,
-      createAt:Date.now()
+      createdAt:Date.now()
     })
   }
 })

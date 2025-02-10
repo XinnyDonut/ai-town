@@ -7,7 +7,7 @@ import { SpriteSelectionModal } from "./SpriteSelectionModal"
 import { updateDescriptions } from "../../../../data/characters";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 // Note: In a real application, you would import API functions from a separate file
 // import { fetchCharacters, createCharacter, updateCharacter, deleteCharacter } from '../api/characters'
@@ -47,11 +47,15 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   isCustom: true,
   }));
   const [isCreating, setIsCreating] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
+  //const [isEditing, setIsEditing] = useState(false) // Deleted isEditing status
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null)
   const [showMultiSelectModal, setShowMultiSelectModal] = useState(false)
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([])
   const [showSpriteModal, setShowSpriteModal] = useState(false)
+  //add delete confirmation
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  //add isDeleting status
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Note: In a real application, you would fetch characters from the backend when the component mounts
   // useEffect(() => {
@@ -78,6 +82,8 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
 
   const createAgentMutation = useMutation(api["customizeAgents/mutations"].createAgent); //I want to mutate too. Damn.
   const updateAgentMutation = useMutation(api["customizeAgents/mutations"].updateAgent); //doesn't like my docker environment. Hate it more.
+  const deleteAgentMutation = useMutation(api["customizeAgents/mutations"].deleteAgent); //add delete mutation
+  
   
   const handleSave = async () => {
     if (!editingCharacter) return;
@@ -108,7 +114,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
       });
     }
   
-    setIsEditing(false);
+    setIsDeleting(false);
     setIsCreating(false);
     setEditingCharacter(null);
     // await updateDescriptions();
@@ -116,7 +122,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   
 
   const handleCancel = () => {
-    setIsEditing(false)
+    setIsDeleting(false)
     setIsCreating(false)
     setEditingCharacter(null)
   }
@@ -178,6 +184,31 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     </div>
   )
 
+  const handleDeleteCharacter = () => {
+    if (selectedCharacter) {
+      setIsDeleting(true);
+      deleteAgentMutation.mutate(selectedCharacter, {
+        onSuccess: () => {
+          // ... 其他代码 ... 
+          // 删除成功后，更新预定义角色列表
+          console.log("Deleting character:", selectedCharacter);
+          // 删除成功后，更新预定义角色列表 
+          const updatedCharacters = predefinedCharacters.filter(
+            (char) => char.id !== selectedCharacter
+          );
+          // 更新预定义角色列表
+          predefinedCharacters.splice(0, predefinedCharacters.length, ...updatedCharacters);
+          setSelectedCharacter(null);
+          setIsDeleting(false);
+        },
+        onError: (error) => {
+          console.error("Error deleting character:", error);
+          setIsDeleting(false);
+        },
+      });
+    }
+  };
+  
   const renderCharacterDetails = () => (
     <div className="character-details">
       {selectedCharacter ? (
@@ -193,16 +224,14 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
             />
             <div className="character-actions">
               <button
-                className="pixel-btn"
-                onClick={() => {
-                  setEditingCharacter(currentCharacter!)
-                  setIsEditing(true)
-                }}
+                className="pixel-btn delete-btn"
+                onClick={() => setShowDeleteConfirmation(true)}
               >
-                Edit Character
+                Delete
               </button>
               <button className="pixel-btn advanced-btn">Advanced</button>
             </div>
+      
           </div>
           <div className="character-info">
             <div className="info-section">
@@ -295,7 +324,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
           {renderCharacterList()}
           {selectedCharacters.length > 0 && renderSelectedCharactersThumbnails()}
         </div>
-        {isCreating || isEditing ? renderCharacterForm() : renderCharacterDetails()}
+        {isCreating ? renderCharacterForm() : renderCharacterDetails()}
       </div>
       <div className="pixel-actions">
         <button className="pixel-btn" onClick={onBack}>
@@ -328,7 +357,14 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
       {showSpriteModal && (
         <SpriteSelectionModal onSelect={handleSpriteSelect} onClose={() => setShowSpriteModal(false)} />
       )}
+      {showDeleteConfirmation && (
+        <DeleteConfirmationModal
+          characterName={currentCharacter?.name || ""}
+          onConfirm={handleDeleteCharacter}
+          onCancel={() => setShowDeleteConfirmation(false)}
+          isDeleting={isDeleting}
+        />
+      )}
     </div>
   )
 }
-

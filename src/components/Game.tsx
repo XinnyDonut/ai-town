@@ -121,6 +121,7 @@ export default function Game() {
             cursor: "nwse-resize",
           }}
         />
+
       </div>
     </>
   );

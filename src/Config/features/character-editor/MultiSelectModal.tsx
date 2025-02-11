@@ -5,7 +5,7 @@ import { useMutation } from "convex/react"
 import { api } from "../../../../convex/_generated/api";
 
 //this Modal is the Modal when you click "ADD TO WORLD" on the UI, 
-//it handles save template and select agents that will be add to actually add to the world:)
+//it handles save template and user can select agents that will be add to actually add to the world:)
 type Character = {
   id: string
   name: string

@@ -89,14 +89,17 @@ export const saveTemplate =mutation ({
   }
 })
 
+//agent table is different from selected agent table!
+//an agent could be deleted, but UI could still be trying to init world from the selectedAgent table
 export const updateSelectedAgents = mutation({
   args: { agentIds: v.array(v.string()) },
   handler: async (ctx, args) => {
-    // Get and delete old selections
+    
+    // get and delete old selections 先删除全部之前选中的
     const oldSelections = await ctx.db.query("selectedAgents").collect();
     await Promise.all(oldSelections.map(selection => ctx.db.delete(selection._id)));
 
-    // Insert new selection if there are agents
+    // insert new selection if there are agents，再加入前端选中的
     if (args.agentIds.length > 0) {
       await ctx.db.insert("selectedAgents", { agentIds: args.agentIds });
     }

@@ -4,11 +4,9 @@ import { Upload, X } from "lucide-react"
 import "./EditCharacter.css"
 import { MultiSelectModal } from "./MultiSelectModal"
 import { SpriteSelectionModal } from "./SpriteSelectionModal"
-import { updateDescriptions } from "../../../../data/characters";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { AgentTemplateLoadModal } from './AgentTemplateLoadModal';
-
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 type Character = {
@@ -46,7 +44,6 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   isCustom: true,
   }));
   const [isCreating, setIsCreating] = useState(false)
-  //const [isEditing, setIsEditing] = useState(false) // Deleted isEditing status
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null)
   const [showMultiSelectModal, setShowMultiSelectModal] = useState(false)
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([])
@@ -57,10 +54,6 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   //add isDeleting status
   const [isDeleting, setIsDeleting] = useState(false)
-
-
-
-
 
   const handleImageUpload = () => {
     setShowSpriteModal(true)
@@ -105,29 +98,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     }
   };
 
-  //this is the function that actually decide which agents to add to the world, when click the save selection btn on add to world
-  // const handleMultiSelectSave = async () => {
-  //   if (selectedCharacters.length === 0) return
-
-  //   try {
-  //     // Delete all agents that are not selected
-  //     const agentsToDelete = agentDocs
-  //       .filter(agent => !selectedCharacters.includes(agent._id))
-  //       .map(agent => agent._id)
-
-  //     await Promise.all(
-  //       agentsToDelete.map(id => deleteAgentMutation({ id }))
-  //     )
-
-  //     setShowMultiSelectModal(false)
-  //     setAddedToWorld(true)
-  //   } catch (error) {
-  //     console.error('Error saving selection:', error)
-  //     alert('Failed to save selection. Please try again.')
-  //   }
-  // }
-
- // Modify handleMultiSelectSave to update selectedAgents table
+ //this is the function that actually decide which agents to add to the world, when click the save selection btn on add to world
 const handleMultiSelectSave = async () => {
   if (selectedCharacters.length === 0) return
 
@@ -156,37 +127,19 @@ const handleMultiSelectSave = async () => {
 
 
 
-  // determine if Next button should be enabled--only able the btn when there is at least one agent added to the world
+  // determine if Next button should be enabled--only enable the btn when there is at least one agent added to the world
   const isNextEnabled = addedToWorld && selectedCharacters.length > 0
 
   // //when deleting character from the thumbnail, both state and database will update
-  // const handleRemoveCharacter = async (id: string) => {
-  //   try {
-  //     // remove from selected characters state
-  //     setSelectedCharacters((prev) => prev.filter((charId) => charId !== id))
-      
-  //     // remove from database
-  //     await deleteAgentMutation({ id })
-
-  //     // If no characters left, reset addedToWorld
-  //     if (selectedCharacters.length <= 1) {
-  //       setAddedToWorld(false)
-  //     }
-  //   } catch (error) {
-  //     console.error('Error removing character:', error)
-  //     alert('Failed to remove character. Please try again.')
-  //   }
-  // }
-
   const handleRemoveCharacter = async (id: string) => {
     try {
-      // First update selectedCharacters state
+      //  update selectedCharacters state
       setSelectedCharacters((prev) => {
         const newSelected = prev.filter((charId) => charId !== id);
         
         // Update selectedAgents in backend with new selection
         updateSelectedAgentsMutation({
-          agentIds: newSelected  // Send the updated list to backend
+          agentIds: newSelected  //sending  updated list to backend
         }).catch(error => {
           console.error('Error updating selected agents:', error);
         });
@@ -194,10 +147,10 @@ const handleMultiSelectSave = async () => {
         return newSelected;
       });
       
-      // Then remove from agents database
+      // remove from agents database
       await deleteAgentMutation({ id });
   
-      // If no characters left, reset addedToWorld
+      // if no characters left, reset addedToWorld --noOne added to the world
       if (selectedCharacters.length <= 1) {
         setAddedToWorld(false);
       }
@@ -371,7 +324,7 @@ const handleMultiSelectSave = async () => {
     }
   };
 
-
+  //agent详情列表
   const renderCharacterDetails = () => (
     <div className="character-details">
       {selectedCharacter ? (
@@ -415,6 +368,7 @@ const handleMultiSelectSave = async () => {
     </div>
   )
 
+  //左侧的列表
   const renderCharacterList = () => (
     <div className="character-list-container">
       <div className="list-actions">
@@ -434,7 +388,6 @@ const handleMultiSelectSave = async () => {
             });
             setIsCreating(true);
           }}
-          
         >
           Create Agent
         </button>
@@ -459,7 +412,7 @@ const handleMultiSelectSave = async () => {
     </div>
     
   )
-
+  //最左下角选中角色的列表
   const renderSelectedCharactersThumbnails = () => (
     <div className="selected-characters-thumbnails">
       <h3 className="pixel-subtitle">Selected Characters</h3>
@@ -523,18 +476,7 @@ const handleMultiSelectSave = async () => {
             setSelectedCharacters([])
             setAddedToWorld(false)
           }}
-          onSave={handleMultiSelectSave}//here in "ADD TO WORLD" when you click save selection, the agents will be added to world
-          // onSave={async () => {
-          //   try {
-          //     await selectAgentForWorldMutation({
-          //       agentIds: selectedCharacters
-          //     });
-          //     setShowMultiSelectModal(false);
-          //     console.log("Selected characters saved:", selectedCharacters);
-          //   } catch (error) {
-          //     console.error("Error saving selected agents:", error);
-          //   }
-          // }}
+          onSave={handleMultiSelectSave}//here in "ADD TO WORLD" when you click "save selection", the agents will be added to world
         />
       )}
       {showSpriteModal && (

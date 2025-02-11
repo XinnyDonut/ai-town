@@ -77,12 +77,15 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   
   const handleLoadTemplate = async (template: Template) => {
     try {
-      //When load template, clear any existing agents
+      if (!confirm("Loading a template will remove all existing agents. Continue?")) {
+        return;
+      }
+      //when load a template, clear any existing agents in the agentTable
       await Promise.all(
         agentDocs.map(agent => deleteAgentMutation({ id: agent._id }))
       );
   
-      // Then create new agents with the agent in templates
+      // then create new agents with the agent in templates,and insert in the agentsTable
       const createdAgents = await Promise.all(
         template.agents.map(agent => createAgentMutation(agent))
       );
@@ -98,48 +101,58 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     }
   };
 
-  //欣欣还在研究
-  // const [templateAgentIds, setTemplateAgentIds] = useState<string[]>([]);
-  // const handleLoadTemplate = async (template: Template) => {
-  //   try {
-  //     // Create new agents from template without deleting existing ones
-  //     const createdAgents = await Promise.all(
-  //       template.agents.map(agent => createAgentMutation(agent))
-  //     );
-      
-  //     // Only show the newly created agents in the UI
-  //     const newAgentIds = createdAgents.map(agent => agent._id);
-  //     setTemplateAgentIds(newAgentIds);
-  //     setAddedToWorld(false);
-  //     setShowTemplateLoadModal(false);
-    
-  //   } catch (error) {
-  //     console.error('Error loading template:', error);
-  //     alert('Failed to load template. Please try again.');
-  //   }
-  // };
+// previous implementation, delete all the agents table--not ideal
+// const handleMultiSelectSave = async () => {
+//   if (selectedCharacters.length === 0) return
 
- //this is the function that actually decide which agents to add to the world, when click the save selection btn on add to world
+//   try {
+//     // delete all agents that are not selected using agent id
+//     const agentsToDelete = agentDocs
+//       .filter(agent => !selectedCharacters.includes(agent._id))
+//       .map(agent => agent._id)
+
+//     await Promise.all(
+//       agentsToDelete.map(id => deleteAgentMutation({ id }))
+//     )
+
+//     // Update selectedAgents in backend
+//     await updateSelectedAgentsMutation({
+//       agentIds: selectedCharacters
+//     })
+
+//     setShowMultiSelectModal(false)
+//     setAddedToWorld(true)
+//   } catch (error) {
+//     console.error('Error saving selection:', error)
+//     alert('Failed to save selection. Please try again.')
+//   }
+// }
+
+//this is the function that actually select which agents to add to the world, when click the save selection btn on add to world
 const handleMultiSelectSave = async () => {
   if (selectedCharacters.length === 0) return
 
   try {
-    // Delete all agents that are not selected
-    const agentsToDelete = agentDocs
-      .filter(agent => !selectedCharacters.includes(agent._id))
-      .map(agent => agent._id)
-
-    await Promise.all(
-      agentsToDelete.map(id => deleteAgentMutation({ id }))
+    // Verify all selected agents still exist
+    const selectedAgentsExist = await Promise.all(
+      selectedCharacters.map(async id => {
+        const agent = agentDocs.find(a => a._id === id)
+        return !!agent
+      })
     )
 
-    // Update selectedAgents in backend
+    if (!selectedAgentsExist.every(exists => exists)) {
+      throw new Error("One or more selected agents no longer exist")
+    }
+
+    // Update selectedAgents with valid selections
     await updateSelectedAgentsMutation({
-      agentIds: selectedCharacters
+      agentIds: selectedCharacters 
     })
 
     setShowMultiSelectModal(false)
     setAddedToWorld(true)
+
   } catch (error) {
     console.error('Error saving selection:', error)
     alert('Failed to save selection. Please try again.')
@@ -151,36 +164,62 @@ const handleMultiSelectSave = async () => {
   // determine if Next button should be enabled--only enable the btn when there is at least one agent added to the world
   const isNextEnabled = addedToWorld && selectedCharacters.length > 0
 
-  // //when deleting character from the thumbnail, both state and database will update
+  //when deleting character from the thumbnail, both state and database will update---not ideal
+  // const handleRemoveCharacter = async (id: string) => {
+  //   try {
+  //     //  update selectedCharacters state
+  //     setSelectedCharacters((prev) => {
+  //       const newSelected = prev.filter((charId) => charId !== id);
+        
+  //       // Update selectedAgents in backend with new selection
+  //       updateSelectedAgentsMutation({
+  //         agentIds: newSelected  //sending  updated list to backend
+  //       }).catch(error => {
+  //         console.error('Error updating selected agents:', error);
+  //       });
+        
+  //       return newSelected;
+  //     });
+      
+  //     // remove from agents database
+  //     await deleteAgentMutation({ id });
+  
+  //     // if no characters left, reset addedToWorld --noOne added to the world
+  //     if (selectedCharacters.length <= 1) {
+  //       setAddedToWorld(false);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error removing character:', error);
+  //     alert('Failed to remove character. Please try again.');
+  //   }
+  // };
+
+  //this is the function that handle deleting 
   const handleRemoveCharacter = async (id: string) => {
     try {
-      //  update selectedCharacters state
+      // only update selectedCharacters state and selectedAgents in backend--keep the agent database!
       setSelectedCharacters((prev) => {
         const newSelected = prev.filter((charId) => charId !== id);
         
-        // Update selectedAgents in backend with new selection
+        // update selectedAgents table with new selection
         updateSelectedAgentsMutation({
-          agentIds: newSelected  //sending  updated list to backend
+          agentIds: newSelected
         }).catch(error => {
           console.error('Error updating selected agents:', error);
         });
         
         return newSelected;
       });
-      
-      // remove from agents database
-      await deleteAgentMutation({ id });
   
-      // if no characters left, reset addedToWorld --noOne added to the world
+      // if no characters left, reset addedToWorld--no one is added to the world, cannot go to next stpe
       if (selectedCharacters.length <= 1) {
         setAddedToWorld(false);
       }
     } catch (error) {
-      console.error('Error removing character:', error);
-      alert('Failed to remove character. Please try again.');
+      console.error('Error removing character from selection:', error);
+      alert('Failed to remove character from selection. Please try again.');
     }
   };
-
   
 
   
@@ -333,7 +372,7 @@ const handleMultiSelectSave = async () => {
     }
   };
 
-  //agent详情列表
+  //agent详情列表(右侧)
   const renderCharacterDetails = () => (
     <div className="character-details">
       {selectedCharacter ? (

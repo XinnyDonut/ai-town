@@ -61,6 +61,7 @@ export const MultiSelectModal: React.FC<MultiSelectModalProps> = ({
         name:name,
         agents:selectAgents,
       })
+      console.log(`saved Template: template name:${name} , agentIncludes: ${selectAgents}`)
     }catch(error){
       console.error("Failed to save Template",error)
     }

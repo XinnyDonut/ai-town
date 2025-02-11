@@ -2,7 +2,7 @@
 Finish Mac-os local development setup document
 
 ## 23/01/2025
-Finish Windows WSL2 local development setup document
+Finish Windows WSL2 local development setup document and one click installation script.
 
 ## 28/01/2025
 - Configure agents to use OpenAI
@@ -21,10 +21,25 @@ Add select music while playing games feature in backend
 ## 03/02/2025
 - Add customising character feature in backend
 
-- Front end UI finished
+- Frontend UI finished
 
 ## 04/02/2025
-Connect UI to music,map,character customization features
+Connect UI to music,map,character customization features，add react router for navigation
 
 ## 05/02/2025
-End of spring 2
+End of sprint 2
+
+## 06/02/2025
+Start of sprint 3
+
+## 07/02/2025
+Add config btn in AI town UI, finish react router implementation
+
+## 10/02/2025
+Finish load and save tempplate both front and backend implementation
+
+## 11/02/2025
+Finish agent refuse to talk implementation, fix UI bugs, merge all branches
+
+## 12/02/2025
+Finalize the product, merge into main

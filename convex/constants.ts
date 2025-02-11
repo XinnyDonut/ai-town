@@ -24,8 +24,7 @@ export const TYPING_TIMEOUT = 15 * 1000;
 export const COLLISION_THRESHOLD = 0.75;
 
 // How many human players can be in a world at once.
-// export const MAX_HUMAN_PLAYERS = 8;
-export const MAX_HUMAN_PLAYERS = 8;  // Reduced from 8
+export const MAX_HUMAN_PLAYERS = 8; 
 
 
 // Don't talk to anyone for 15s after having a conversation.

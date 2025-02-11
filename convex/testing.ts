@@ -290,34 +290,18 @@ export const resetWorldForNewMap = mutation({
   }
 });
 
-//dont think this one is a good solution, keep here for now
-export const resetandDeleteWorldForNewMap = mutation({
+export const listAgents = query({
   handler: async (ctx) => {
-    // First find and stop the current world
-    const worldStatus = await ctx.db
-      .query('worldStatus')
-      .filter((q) => q.eq(q.field('isDefault'), true))
-      .first();
-      
-    if (!worldStatus) {
-      return;
-    }
+    const agents = await ctx.db.query("agents").collect();
+    console.log(agents);
+    return agents;
+  }
+});
 
-    // Stop the engine first
-    await ctx.db.patch(worldStatus._id, { status: 'stoppedByDeveloper' });
-
-    // Clean up all tables (except embeddingsCache)--would cause issue?
-    for (const tableName of Object.keys(schema.tables)) {
-      if (tableName === 'embeddingsCache') {
-        continue;
-      }
-      await ctx.scheduler.runAfter(0, internal.testing.deletePage, { 
-        tableName, 
-        cursor: null 
-      });
-    }
-
-    // archive the world
-    await ctx.db.patch(worldStatus._id, { isDefault: false });
+export const listWorlds = query({
+  handler: async (ctx) => {
+    const worlds = await ctx.db.query("worlds").collect();
+    console.log(worlds);
+    return worlds;
   }
 });

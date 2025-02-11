@@ -4,13 +4,10 @@ import { Upload, X } from "lucide-react"
 import "./EditCharacter.css"
 import { MultiSelectModal } from "./MultiSelectModal"
 import { SpriteSelectionModal } from "./SpriteSelectionModal"
-import { updateDescriptions } from "../../../../data/characters";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
+import { AgentTemplateLoadModal } from './AgentTemplateLoadModal';
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
-
-// Note: In a real application, you would import API functions from a separate file
-// import { fetchCharacters, createCharacter, updateCharacter, deleteCharacter } from '../api/characters'
 
 type Character = {
   id: string //convex db id must be string
@@ -34,7 +31,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   onBack,
   onNext,
 }) => {
-
+  
   const agentDocs = useQuery(api["customizeAgents/queries"].getAgents) ?? []; //must do this. Convex thing. hate it.
   const predefinedCharacters = agentDocs.map((doc) => ({
   id: doc._id,
@@ -47,24 +44,16 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   isCustom: true,
   }));
   const [isCreating, setIsCreating] = useState(false)
-  //const [isEditing, setIsEditing] = useState(false) // Deleted isEditing status
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null)
   const [showMultiSelectModal, setShowMultiSelectModal] = useState(false)
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([])
   const [showSpriteModal, setShowSpriteModal] = useState(false)
+  const [showTemplateLoadModal, setShowTemplateLoadModal] = useState(false)
+  const [addedToWorld, setAddedToWorld] = useState<boolean>(false);
   //add delete confirmation
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   //add isDeleting status
   const [isDeleting, setIsDeleting] = useState(false)
-
-  // Note: In a real application, you would fetch characters from the backend when the component mounts
-  // useEffect(() => {
-  //   const loadCharacters = async () => {
-  //     const characters = await fetchCharacters()
-  //     // Update the state with fetched characters
-  //   }
-  //   loadCharacters()
-  // }, [])
 
   const handleImageUpload = () => {
     setShowSpriteModal(true)
@@ -82,15 +71,103 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
 
   const createAgentMutation = useMutation(api["customizeAgents/mutations"].createAgent); //I want to mutate too. Damn.
   const updateAgentMutation = useMutation(api["customizeAgents/mutations"].updateAgent); //doesn't like my docker environment. Hate it more.
-  const deleteAgentMutation = useMutation(api["customizeAgents/mutations"].deleteAgent); //add delete mutation
+  const deleteAgentMutation =useMutation(api["customizeAgents/mutations"].deleteAgent);
   const selectAgentForWorldMutation = useMutation(api["customizeAgents/mutations"].selectAgentForWorld);
+  const updateSelectedAgentsMutation = useMutation(api["customizeAgents/mutations"].updateSelectedAgents)
   
+  const handleLoadTemplate = async (template: Template) => {
+    try {
+      //When load template, clear any existing agents
+      await Promise.all(
+        agentDocs.map(agent => deleteAgentMutation({ id: agent._id }))
+      );
+  
+      // Then create new agents with the agent in templates
+      const createdAgents = await Promise.all(
+        template.agents.map(agent => createAgentMutation(agent))
+      );
+      
+      //though now, we haven't select any agents to acutally add to the world, we are simply loading the template for user to see
+      setAddedToWorld(false)
+      setSelectedCharacters([])
+      setShowTemplateLoadModal(false);
+    
+    } catch (error) {
+      console.error('Error loading template:', error);
+      alert('Failed to load template. Please try again.');
+    }
+  };
+
+ //this is the function that actually decide which agents to add to the world, when click the save selection btn on add to world
+const handleMultiSelectSave = async () => {
+  if (selectedCharacters.length === 0) return
+
+  try {
+    // Delete all agents that are not selected
+    const agentsToDelete = agentDocs
+      .filter(agent => !selectedCharacters.includes(agent._id))
+      .map(agent => agent._id)
+
+    await Promise.all(
+      agentsToDelete.map(id => deleteAgentMutation({ id }))
+    )
+
+    // Update selectedAgents in backend
+    await updateSelectedAgentsMutation({
+      agentIds: selectedCharacters
+    })
+
+    setShowMultiSelectModal(false)
+    setAddedToWorld(true)
+  } catch (error) {
+    console.error('Error saving selection:', error)
+    alert('Failed to save selection. Please try again.')
+  }
+}
+
+
+
+  // determine if Next button should be enabled--only enable the btn when there is at least one agent added to the world
+  const isNextEnabled = addedToWorld && selectedCharacters.length > 0
+
+  // //when deleting character from the thumbnail, both state and database will update
+  const handleRemoveCharacter = async (id: string) => {
+    try {
+      //  update selectedCharacters state
+      setSelectedCharacters((prev) => {
+        const newSelected = prev.filter((charId) => charId !== id);
+        
+        // Update selectedAgents in backend with new selection
+        updateSelectedAgentsMutation({
+          agentIds: newSelected  //sending  updated list to backend
+        }).catch(error => {
+          console.error('Error updating selected agents:', error);
+        });
+        
+        return newSelected;
+      });
+      
+      // remove from agents database
+      await deleteAgentMutation({ id });
+  
+      // if no characters left, reset addedToWorld --noOne added to the world
+      if (selectedCharacters.length <= 1) {
+        setAddedToWorld(false);
+      }
+    } catch (error) {
+      console.error('Error removing character:', error);
+      alert('Failed to remove character. Please try again.');
+    }
+  };
+
+  
+
   
   const handleSave = async () => {
     if (!editingCharacter) return;
   
     //判断新建还是eedit
-    const existing = agentDocs.find((doc) => doc._id.id === editingCharacter.id);
+    const existing = agentDocs.find((doc) => doc._id === editingCharacter.id);
     if (!existing) {
       // 新建
       await createAgentMutation({
@@ -131,7 +208,19 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   const currentCharacter = predefinedCharacters.find((char) => char.id === selectedCharacter)
 
   const renderCharacterForm = () => (
-    <div className="character-details">
+    <div className="character-details">  
+      <div className="list-actions">
+        <button className="pixel-btn" onClick={() => setShowTemplateLoadModal(true)}>
+          Load Saved Template
+        </button>
+        <button className="pixel-btn" onClick={() => setIsCreating(true)}>
+          Create Agent
+        </button>
+        <button className="pixel-btn" onClick={() => setShowMultiSelectModal(true)}>
+          Add to World
+        </button>
+      </div>
+      
       <div className="character-header">
         <input
           type="text"
@@ -185,49 +274,57 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     </div>
   )
 
-  // const handleDeleteCharacter = () => {
+  // const handleDeleteCharacter = async () => {
   //   if (selectedCharacter) {
-  //     setIsDeleting(true);
-  //     deleteAgentMutation.mutate(selectedCharacter, {
-  //       onSuccess: () => {
-  //         // ... 其他代码 ... 
-  //         // 删除成功后，更新预定义角色列表
-  //         console.log("Deleting character:", selectedCharacter);
-  //         // 删除成功后，更新预定义角色列表 
-  //         const updatedCharacters = predefinedCharacters.filter(
-  //           (char) => char.id !== selectedCharacter
-  //         );
-  //         // 更新预定义角色列表
-  //         predefinedCharacters.splice(0, predefinedCharacters.length, ...updatedCharacters);
-  //         setSelectedCharacter(null);
-  //         setIsDeleting(false);
-  //       },
-  //       onError: (error) => {
-  //         console.error("Error deleting character:", error);
-  //         setIsDeleting(false);
-  //       },
-  //     });
+  //     try {
+  //       setIsDeleting(true);
+  //       await deleteAgentMutation({ id: selectedCharacter });  // 直接调用，传入正确的参数
+        
+  //       setSelectedCharacter(null);
+  //       setShowDeleteConfirmation(false);
+  //       setIsDeleting(false);
+        
+  //       // 不需要手动更新 predefinedCharacters，因为 useQuery 会自动刷新
+  //     } catch (error) {
+  //       console.error("Error deleting character:", error);
+  //       setIsDeleting(false);
+  //     }
   //   }
   // };
+  
 
   const handleDeleteCharacter = async () => {
     if (selectedCharacter) {
       try {
         setIsDeleting(true);
-        await deleteAgentMutation({ id: selectedCharacter });  // 直接调用，传入正确的参数
+        await deleteAgentMutation({ id: selectedCharacter });
         
+        // Also remove from selectedCharacters if it was there
+        setSelectedCharacters(prev => prev.filter(id => id !== selectedCharacter));
+        
+        // Update selectedAgents in backend with remaining agents
+        const remainingAgentIds = selectedCharacters.filter(id => id !== selectedCharacter);
+        await updateSelectedAgentsMutation({
+          agentIds: remainingAgentIds
+        });
+        
+        // Reset states
         setSelectedCharacter(null);
         setShowDeleteConfirmation(false);
         setIsDeleting(false);
         
-        // 不需要手动更新 predefinedCharacters，因为 useQuery 会自动刷新
+        // Reset addedToWorld if no agents left
+        if (remainingAgentIds.length === 0) {
+          setAddedToWorld(false);
+        }
       } catch (error) {
         console.error("Error deleting character:", error);
         setIsDeleting(false);
       }
     }
   };
-  
+
+  //agent详情列表
   const renderCharacterDetails = () => (
     <div className="character-details">
       {selectedCharacter ? (
@@ -271,9 +368,13 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     </div>
   )
 
+  //左侧的列表
   const renderCharacterList = () => (
     <div className="character-list-container">
       <div className="list-actions">
+      <button className="pixel-btn" onClick={() => setShowTemplateLoadModal(true)}>
+          Load Saved Template
+        </button>
         <button
           className="pixel-btn"
           onClick={() => {
@@ -287,7 +388,6 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
             });
             setIsCreating(true);
           }}
-          
         >
           Create Agent
         </button>
@@ -312,7 +412,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     </div>
     
   )
-
+  //最左下角选中角色的列表
   const renderSelectedCharactersThumbnails = () => (
     <div className="selected-characters-thumbnails">
       <h3 className="pixel-subtitle">Selected Characters</h3>
@@ -324,7 +424,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
               <img src={character?.preview || "/placeholder.svg"} alt={character?.name} className="thumbnail-image" />
               <button
                 className="remove-thumbnail"
-                onClick={() => setSelectedCharacters((prev) => prev.filter((charId) => charId !== id))}
+                onClick={() => handleRemoveCharacter(id)}
               >
                 <X size={16} />
               </button>
@@ -334,6 +434,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
       </div>
     </div>
   )
+
 
   return (
     <div className="pixel-container">
@@ -349,10 +450,18 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
         <button className="pixel-btn" onClick={onBack}>
           Back
         </button>
-        <button className="pixel-btn" onClick={onNext} disabled={!selectedCharacter && selectedCharacters.length === 0}>
+        <button className="pixel-btn" onClick={onNext} disabled={!addedToWorld || selectedCharacters.length === 0}>
           Next
         </button>
       </div>
+      {/*******/}
+      {showTemplateLoadModal && (
+        <AgentTemplateLoadModal
+          onClose={() => setShowTemplateLoadModal(false)}
+          onLoadTemplate={handleLoadTemplate}
+        />
+      )}
+      {/*******/}
       {showMultiSelectModal && (
         <MultiSelectModal
           characters={predefinedCharacters}
@@ -365,24 +474,9 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
           onClose={() => {
             setShowMultiSelectModal(false)
             setSelectedCharacters([])
+            setAddedToWorld(false)
           }}
-          // onSave={() => {
-          //   setShowMultiSelectModal(false)
-          //   // Here you would typically do something with the selected characters
-          //   console.log("Selected characters:", selectedCharacters)
-          // }}
-
-          onSave={async () => {
-            try {
-              await selectAgentForWorldMutation({
-                agentIds: selectedCharacters
-              });
-              setShowMultiSelectModal(false);
-              console.log("Selected characters saved:", selectedCharacters);
-            } catch (error) {
-              console.error("Error saving selected agents:", error);
-            }
-          }}
+          onSave={handleMultiSelectSave}//here in "ADD TO WORLD" when you click "save selection", the agents will be added to world
         />
       )}
       {showSpriteModal && (

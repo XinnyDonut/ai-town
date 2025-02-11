@@ -7,35 +7,74 @@ export default function MusicButton() {
   const [isPlaying, setPlaying] = useState(false);
   const [selectedMusic, setSelectedMusic] = useState<string | null>(null);
 
-  // Load selected music from localStorage
+  // // Load selected music from localStorage
+  // useEffect(() => {
+  //   try {
+  //     const storedMusic = JSON.parse(localStorage.getItem("selectedMusic") || "null");
+  //     if (storedMusic && storedMusic.file) {
+  //       setSelectedMusic(storedMusic.file);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error reading from localStorage:", error);
+  //   }
+  // }, []);
+
+  // // Add music to Pixi sound system
+  // useEffect(() => {
+  //   if (selectedMusic) {
+  //     // Ensure correct path
+  //     const musicPath = selectedMusic;
+
+  //     // Avoid duplicate audio loading
+  //     if (!sound.exists("background")) {
+  //       sound.add("background", {
+  //         url: musicPath,
+  //         loop: true,
+  //         preload: true,
+  //         autoPlay: false,
+  //       });
+  //     }
+  //   }
+  // }, [selectedMusic]);
+
   useEffect(() => {
+    // Stop any existing background music
+    if (sound.exists("background")) {
+      sound.stop("background");
+      sound.remove("background");
+    }
+
     try {
       const storedMusic = JSON.parse(localStorage.getItem("selectedMusic") || "null");
       if (storedMusic && storedMusic.file) {
         setSelectedMusic(storedMusic.file);
+        // Add new music but don't autoplay
+        sound.add("background", {
+          url: storedMusic.file,
+          loop: true,
+          preload: true,
+          autoPlay: false,
+        });
+        setPlaying(false); // Ensure button shows "Music" initially
+      } else {
+        // If no stored music, use default
+        const defaultMusicPath = '/ai-town/assets/background.mp3';
+        sound.add("background", {
+          url: defaultMusicPath,
+          loop: true,
+          preload: true,
+          autoPlay: false,
+        });
+        setPlaying(false);
       }
     } catch (error) {
       console.error("Error reading from localStorage:", error);
     }
   }, []);
 
-  // Add music to Pixi sound system
-  useEffect(() => {
-    if (selectedMusic) {
-      // Ensure correct path
-      const musicPath = selectedMusic;
 
-      // Avoid duplicate audio loading
-      if (!sound.exists("background")) {
-        sound.add("background", {
-          url: musicPath,
-          loop: true,
-          preload: true,
-          autoPlay: false,
-        });
-      }
-    }
-  }, [selectedMusic]);
+
+
 
   // Play/Pause music
   const flipSwitch = async () => {

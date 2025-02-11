@@ -1,6 +1,7 @@
 import type React from "react"
-import { useState } from "react"
+import { useState,useEffect } from "react"
 import "./SelectMusic.css"
+import { sound } from "@pixi/sound";
 
 const songs: Song[] = [
   { id: 1, name: "Calming Piano ", file: "music1.mp3" },
@@ -24,6 +25,20 @@ type SelectMusicProps = {
 export const SelectMusic: React.FC<SelectMusicProps> = ({ selectedMusic, setSelectedMusic, onBack, onSave }) => {
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
 
+  // when enter the music selection page, stops any music.
+  useEffect(() => {
+    if (sound.exists("background")) {
+      sound.stop("background");
+    }
+    
+    return () => {
+      //when leaving the music selection page, stop any music
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    };
+  }, []);
   const handleMusicClick = (song: Song) => {
     setSelectedMusic(song.id)
 
@@ -38,6 +53,25 @@ export const SelectMusic: React.FC<SelectMusicProps> = ({ selectedMusic, setSele
     newAudio.play()
     setAudio(newAudio)
   }
+
+
+  const handleSave = () => {
+    // Stop audio when saving
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    onSave();
+  };
+
+  const handleBack = () => {
+    // Stop audio when going back
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    onBack();
+  };
 
   return (
     <div className="pixel-container">
@@ -56,13 +90,15 @@ export const SelectMusic: React.FC<SelectMusicProps> = ({ selectedMusic, setSele
         </div>
       </div>
       <div className="pixel-actions">
-        <button className="pixel-btn" onClick={onBack}>
+        <button className="pixel-btn" onClick={handleBack}>
           Back
         </button>
-        <button className="pixel-btn" onClick={onSave} disabled={!selectedMusic}>
+        <button className="pixel-btn" onClick={handleSave} disabled={!selectedMusic}>
           Save
         </button>
       </div>
     </div>
   )
 }
+
+

@@ -7,20 +7,18 @@ import { StepProgress } from "./components/StepProgress/StepProgress"
 import { useMutation,useQuery } from "convex/react"
 import mapConfig from "../../data/maps/mapConfig";
 import{ api }from "../../convex/_generated/api"
+import { useNavigate } from 'react-router-dom';
 import "./styles/global.css"
-
-
-
-// Note: In a real application, you would import API functions from a separate file
-// import { fetchGameSetup, updateGameSetup } from './api/gameSetup'
 
 type Page = "selectMap" | "editCharacter" | "selectMusic"
 
 function ConfigPage() {
   const [currentPage, setCurrentPage] = useState<Page>("selectMap")
   const [selectedMap, setSelectedMap] = useState<string | undefined>(mapConfig.defaultMap)
-  const [selectedCharacter, setSelectedCharacter] = useState<number | null>(null)
-  const [selectedMusic, setSelectedMusic] = useState<number | null>(null)
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null)
+  const [selectedMusic, setSelectedMusic] = useState<string | null>(null)
+  const agentDocs = useQuery(api["customizeAgents/queries"].getAgents) ?? []
+  const nav = useNavigate();
 
   const steps = ["Select Map", "Edit Character", "Select Music"]
 
@@ -51,28 +49,16 @@ function ConfigPage() {
     }
   }
 
-  // Yuna's handle save doesn't do much, only here to send alert
-  const YunaHandleSave = () => {
-    if (selectedMap && selectedCharacter && selectedMusic) {
-      // Note: In a real application, you would save the game setup to the backend
-      // updateGameSetup({ mapId: selectedMap, characterId: selectedCharacter, musicId: selectedMusic })
-      alert(`Saved! Map: ${selectedMap}, Character: ${selectedCharacter}, Music: ${selectedMusic}`)
-    } else {
-      alert("Please complete all selections before saving!")
-    }
-  }
-
-
   const resetWorld=useMutation(api.testing.resetWorldForNewMap)
   const initWorld=useMutation(api.init.default)
   const resumeWorld = useMutation(api.testing.resume);
-  
-  //handle save now only handles map selection. Add more handler for character and music
+ 
   const handleSave = async () => {
     try {
       await resetWorld();
       await initWorld({
-        numAgents: undefined,
+        // numAgents: undefined,
+        numAgents: agentDocs.length, //only initialize the world with the amount of agent ins the doc, a double save 
         mapId: selectedMap
       });
   
@@ -86,8 +72,9 @@ function ConfigPage() {
         };
   
         localStorage.setItem("selectedMusic", JSON.stringify(storedMusic));
-  
         alert(`Save successful: Map and Music updated.\nMusic: music${selectedMusic}.mp3`);
+
+        nav('/');
       } else {
         alert("Save successful: Map updated. No music selected.");
       }

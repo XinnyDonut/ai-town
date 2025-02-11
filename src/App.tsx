@@ -9,7 +9,7 @@ import ConvexClientProvider from './components/ConvexClientProvider';
       <BrowserRouter basename='/ai-town'>
         <Routes>
           <Route path="/" element={<GamePage />}/>
-          <Route path="/config" element={<ConfigPage />}/>
+          <Route path="/settings" element={<ConfigPage />}/>
         </Routes>  
       </BrowserRouter>
     </ConvexClientProvider>

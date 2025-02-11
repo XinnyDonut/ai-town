@@ -3,6 +3,9 @@ import { mutation } from "../_generated/server";
 import { MutationCtx } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
 import { insertInput } from "../aiTown/insertInput";
+import { v } from "convex/values";
+import { Character } from "@/components/Character";
+
 
 export const createAgent = mutation({
  handler: async (ctx: MutationCtx, args: { 
@@ -64,6 +67,43 @@ export const removeAgentFromWorld = mutation({
      createdAt: Date.now() 
    });
  },
+});
+
+
+export const saveTemplate =mutation ({
+  args:{
+    name:v.string(),
+    agents:v.array(v.object({
+      name:v.string(),
+      character:v.string(),
+      identity:v.string(),
+      plan:v.string()
+    })),    
+  },
+  handler: async (ctx, args)=>{
+    await ctx.db.insert('agentTemplates',{
+      name:args.name,
+      agents:args.agents,
+      createdAt:Date.now()
+    })
+  }
+})
+
+//agent table is different from selected agent table!
+//an agent could be deleted, but UI could still be trying to init world from the selectedAgent table
+export const updateSelectedAgents = mutation({
+  args: { agentIds: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    
+    // get and delete old selections 先删除全部之前选中的
+    const oldSelections = await ctx.db.query("selectedAgents").collect();
+    await Promise.all(oldSelections.map(selection => ctx.db.delete(selection._id)));
+
+    // insert new selection if there are agents，再加入前端选中的
+    if (args.agentIds.length > 0) {
+      await ctx.db.insert("selectedAgents", { agentIds: args.agentIds });
+    }
+  }
 });
 
 // //事件逻辑

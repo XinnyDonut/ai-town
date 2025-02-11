@@ -98,6 +98,27 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     }
   };
 
+  //欣欣还在研究
+  // const [templateAgentIds, setTemplateAgentIds] = useState<string[]>([]);
+  // const handleLoadTemplate = async (template: Template) => {
+  //   try {
+  //     // Create new agents from template without deleting existing ones
+  //     const createdAgents = await Promise.all(
+  //       template.agents.map(agent => createAgentMutation(agent))
+  //     );
+      
+  //     // Only show the newly created agents in the UI
+  //     const newAgentIds = createdAgents.map(agent => agent._id);
+  //     setTemplateAgentIds(newAgentIds);
+  //     setAddedToWorld(false);
+  //     setShowTemplateLoadModal(false);
+    
+  //   } catch (error) {
+  //     console.error('Error loading template:', error);
+  //     alert('Failed to load template. Please try again.');
+  //   }
+  // };
+
  //this is the function that actually decide which agents to add to the world, when click the save selection btn on add to world
 const handleMultiSelectSave = async () => {
   if (selectedCharacters.length === 0) return
@@ -209,18 +230,6 @@ const handleMultiSelectSave = async () => {
 
   const renderCharacterForm = () => (
     <div className="character-details">  
-      <div className="list-actions">
-        <button className="pixel-btn" onClick={() => setShowTemplateLoadModal(true)}>
-          Load Saved Template
-        </button>
-        <button className="pixel-btn" onClick={() => setIsCreating(true)}>
-          Create Agent
-        </button>
-        <button className="pixel-btn" onClick={() => setShowMultiSelectModal(true)}>
-          Add to World
-        </button>
-      </div>
-      
       <div className="character-header">
         <input
           type="text"

@@ -9,6 +9,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { AgentTemplateLoadModal } from './AgentTemplateLoadModal';
 
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 type Character = {
   id: string //convex db id must be string
@@ -45,13 +46,21 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   isCustom: true,
   }));
   const [isCreating, setIsCreating] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
+  //const [isEditing, setIsEditing] = useState(false) // Deleted isEditing status
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null)
   const [showMultiSelectModal, setShowMultiSelectModal] = useState(false)
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([])
   const [showSpriteModal, setShowSpriteModal] = useState(false)
   const [showTemplateLoadModal, setShowTemplateLoadModal] = useState(false)
   const [addedToWorld, setAddedToWorld] = useState<boolean>(false);
+  //add delete confirmation
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  //add isDeleting status
+  const [isDeleting, setIsDeleting] = useState(false)
+
+
+
+
 
   const handleImageUpload = () => {
     setShowSpriteModal(true)
@@ -70,6 +79,8 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   const createAgentMutation = useMutation(api["customizeAgents/mutations"].createAgent); //I want to mutate too. Damn.
   const updateAgentMutation = useMutation(api["customizeAgents/mutations"].updateAgent); //doesn't like my docker environment. Hate it more.
   const deleteAgentMutation =useMutation(api["customizeAgents/mutations"].deleteAgent);
+  const selectAgentForWorldMutation = useMutation(api["customizeAgents/mutations"].selectAgentForWorld);
+  const updateSelectedAgentsMutation = useMutation(api["customizeAgents/mutations"].updateSelectedAgents)
   
   const handleLoadTemplate = async (template: Template) => {
     try {
@@ -95,48 +106,109 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   };
 
   //this is the function that actually decide which agents to add to the world, when click the save selection btn on add to world
-  const handleMultiSelectSave = async () => {
-    if (selectedCharacters.length === 0) return
+  // const handleMultiSelectSave = async () => {
+  //   if (selectedCharacters.length === 0) return
 
-    try {
-      // Delete all agents that are not selected
-      const agentsToDelete = agentDocs
-        .filter(agent => !selectedCharacters.includes(agent._id))
-        .map(agent => agent._id)
+  //   try {
+  //     // Delete all agents that are not selected
+  //     const agentsToDelete = agentDocs
+  //       .filter(agent => !selectedCharacters.includes(agent._id))
+  //       .map(agent => agent._id)
 
-      await Promise.all(
-        agentsToDelete.map(id => deleteAgentMutation({ id }))
-      )
+  //     await Promise.all(
+  //       agentsToDelete.map(id => deleteAgentMutation({ id }))
+  //     )
 
-      setShowMultiSelectModal(false)
-      setAddedToWorld(true)
-    } catch (error) {
-      console.error('Error saving selection:', error)
-      alert('Failed to save selection. Please try again.')
-    }
+  //     setShowMultiSelectModal(false)
+  //     setAddedToWorld(true)
+  //   } catch (error) {
+  //     console.error('Error saving selection:', error)
+  //     alert('Failed to save selection. Please try again.')
+  //   }
+  // }
+
+ // Modify handleMultiSelectSave to update selectedAgents table
+const handleMultiSelectSave = async () => {
+  if (selectedCharacters.length === 0) return
+
+  try {
+    // Delete all agents that are not selected
+    const agentsToDelete = agentDocs
+      .filter(agent => !selectedCharacters.includes(agent._id))
+      .map(agent => agent._id)
+
+    await Promise.all(
+      agentsToDelete.map(id => deleteAgentMutation({ id }))
+    )
+
+    // Update selectedAgents in backend
+    await updateSelectedAgentsMutation({
+      agentIds: selectedCharacters
+    })
+
+    setShowMultiSelectModal(false)
+    setAddedToWorld(true)
+  } catch (error) {
+    console.error('Error saving selection:', error)
+    alert('Failed to save selection. Please try again.')
   }
+}
+
+
 
   // determine if Next button should be enabled--only able the btn when there is at least one agent added to the world
   const isNextEnabled = addedToWorld && selectedCharacters.length > 0
 
-  //when deleting character from the thumbnail, both state and database will update
+  // //when deleting character from the thumbnail, both state and database will update
+  // const handleRemoveCharacter = async (id: string) => {
+  //   try {
+  //     // remove from selected characters state
+  //     setSelectedCharacters((prev) => prev.filter((charId) => charId !== id))
+      
+  //     // remove from database
+  //     await deleteAgentMutation({ id })
+
+  //     // If no characters left, reset addedToWorld
+  //     if (selectedCharacters.length <= 1) {
+  //       setAddedToWorld(false)
+  //     }
+  //   } catch (error) {
+  //     console.error('Error removing character:', error)
+  //     alert('Failed to remove character. Please try again.')
+  //   }
+  // }
+
   const handleRemoveCharacter = async (id: string) => {
     try {
-      // remove from selected characters state
-      setSelectedCharacters((prev) => prev.filter((charId) => charId !== id))
+      // First update selectedCharacters state
+      setSelectedCharacters((prev) => {
+        const newSelected = prev.filter((charId) => charId !== id);
+        
+        // Update selectedAgents in backend with new selection
+        updateSelectedAgentsMutation({
+          agentIds: newSelected  // Send the updated list to backend
+        }).catch(error => {
+          console.error('Error updating selected agents:', error);
+        });
+        
+        return newSelected;
+      });
       
-      // remove from database
-      await deleteAgentMutation({ id })
-
+      // Then remove from agents database
+      await deleteAgentMutation({ id });
+  
       // If no characters left, reset addedToWorld
       if (selectedCharacters.length <= 1) {
-        setAddedToWorld(false)
+        setAddedToWorld(false);
       }
     } catch (error) {
-      console.error('Error removing character:', error)
-      alert('Failed to remove character. Please try again.')
+      console.error('Error removing character:', error);
+      alert('Failed to remove character. Please try again.');
     }
-  }
+  };
+
+  
+
   
   const handleSave = async () => {
     if (!editingCharacter) return;
@@ -167,7 +239,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
       });
     }
   
-    setIsEditing(false);
+    setIsDeleting(false);
     setIsCreating(false);
     setEditingCharacter(null);
     // await updateDescriptions();
@@ -175,7 +247,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   
 
   const handleCancel = () => {
-    setIsEditing(false)
+    setIsDeleting(false)
     setIsCreating(false)
     setEditingCharacter(null)
   }
@@ -249,6 +321,57 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     </div>
   )
 
+  // const handleDeleteCharacter = async () => {
+  //   if (selectedCharacter) {
+  //     try {
+  //       setIsDeleting(true);
+  //       await deleteAgentMutation({ id: selectedCharacter });  // 直接调用，传入正确的参数
+        
+  //       setSelectedCharacter(null);
+  //       setShowDeleteConfirmation(false);
+  //       setIsDeleting(false);
+        
+  //       // 不需要手动更新 predefinedCharacters，因为 useQuery 会自动刷新
+  //     } catch (error) {
+  //       console.error("Error deleting character:", error);
+  //       setIsDeleting(false);
+  //     }
+  //   }
+  // };
+  
+
+  const handleDeleteCharacter = async () => {
+    if (selectedCharacter) {
+      try {
+        setIsDeleting(true);
+        await deleteAgentMutation({ id: selectedCharacter });
+        
+        // Also remove from selectedCharacters if it was there
+        setSelectedCharacters(prev => prev.filter(id => id !== selectedCharacter));
+        
+        // Update selectedAgents in backend with remaining agents
+        const remainingAgentIds = selectedCharacters.filter(id => id !== selectedCharacter);
+        await updateSelectedAgentsMutation({
+          agentIds: remainingAgentIds
+        });
+        
+        // Reset states
+        setSelectedCharacter(null);
+        setShowDeleteConfirmation(false);
+        setIsDeleting(false);
+        
+        // Reset addedToWorld if no agents left
+        if (remainingAgentIds.length === 0) {
+          setAddedToWorld(false);
+        }
+      } catch (error) {
+        console.error("Error deleting character:", error);
+        setIsDeleting(false);
+      }
+    }
+  };
+
+
   const renderCharacterDetails = () => (
     <div className="character-details">
       {selectedCharacter ? (
@@ -264,16 +387,14 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
             />
             <div className="character-actions">
               <button
-                className="pixel-btn"
-                onClick={() => {
-                  setEditingCharacter(currentCharacter!)
-                  setIsEditing(true)
-                }}
+                className="pixel-btn delete-btn"
+                onClick={() => setShowDeleteConfirmation(true)}
               >
-                Edit Character
+                Delete
               </button>
               <button className="pixel-btn advanced-btn">Advanced</button>
             </div>
+      
           </div>
           <div className="character-info">
             <div className="info-section">
@@ -361,6 +482,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     </div>
   )
 
+
   return (
     <div className="pixel-container">
       <h1 className="pixel-title">Edit Character</h1>
@@ -369,13 +491,13 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
           {renderCharacterList()}
           {selectedCharacters.length > 0 && renderSelectedCharactersThumbnails()}
         </div>
-        {isCreating || isEditing ? renderCharacterForm() : renderCharacterDetails()}
+        {isCreating ? renderCharacterForm() : renderCharacterDetails()}
       </div>
       <div className="pixel-actions">
         <button className="pixel-btn" onClick={onBack}>
           Back
         </button>
-        <button className="pixel-btn" onClick={onNext} disabled={!selectedCharacter && selectedCharacters.length === 0}>
+        <button className="pixel-btn" onClick={onNext} disabled={!addedToWorld || selectedCharacters.length === 0}>
           Next
         </button>
       </div>
@@ -402,12 +524,30 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
             setAddedToWorld(false)
           }}
           onSave={handleMultiSelectSave}//here in "ADD TO WORLD" when you click save selection, the agents will be added to world
+          // onSave={async () => {
+          //   try {
+          //     await selectAgentForWorldMutation({
+          //       agentIds: selectedCharacters
+          //     });
+          //     setShowMultiSelectModal(false);
+          //     console.log("Selected characters saved:", selectedCharacters);
+          //   } catch (error) {
+          //     console.error("Error saving selected agents:", error);
+          //   }
+          // }}
         />
       )}
       {showSpriteModal && (
         <SpriteSelectionModal onSelect={handleSpriteSelect} onClose={() => setShowSpriteModal(false)} />
       )}
+      {showDeleteConfirmation && (
+        <DeleteConfirmationModal
+          characterName={currentCharacter?.name || ""}
+          onConfirm={handleDeleteCharacter}
+          onCancel={() => setShowDeleteConfirmation(false)}
+          isDeleting={isDeleting}
+        />
+      )}
     </div>
   )
 }
-

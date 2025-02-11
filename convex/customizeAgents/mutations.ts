@@ -89,6 +89,20 @@ export const saveTemplate =mutation ({
   }
 })
 
+export const updateSelectedAgents = mutation({
+  args: { agentIds: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    // Get and delete old selections
+    const oldSelections = await ctx.db.query("selectedAgents").collect();
+    await Promise.all(oldSelections.map(selection => ctx.db.delete(selection._id)));
+
+    // Insert new selection if there are agents
+    if (args.agentIds.length > 0) {
+      await ctx.db.insert("selectedAgents", { agentIds: args.agentIds });
+    }
+  }
+});
+
 // //事件逻辑
 
 // export const createAgentInput = mutation({

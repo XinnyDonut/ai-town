@@ -4,21 +4,17 @@ import { Upload, X } from "lucide-react"
 import "./EditCharacter.css"
 import { MultiSelectModal } from "./MultiSelectModal"
 import { SpriteSelectionModal } from "./SpriteSelectionModal"
-import { updateDescriptions } from "../../../../data/characters";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
-
-// Note: In a real application, you would import API functions from a separate file
-// import { fetchCharacters, createCharacter, updateCharacter, deleteCharacter } from '../api/characters'
 
 type Character = {
   id: string //convex db id must be string
   name: string //name is name
   description: string //actually identity in db
-  goals: string //hmmm.. =plans for backend!
-  preview: string //not my thing but returns f*. Change ticked
-  isCustom?: boolean //not my thing
+  goals: string //hmmm.. =plans for db!
+  preview: string //returns f*. 
+  isCustom?: boolean 
 }
 
 type EditCharacterProps = {
@@ -35,7 +31,7 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   onNext,
 }) => {
 
-  const agentDocs = useQuery(api["customizeAgents/queries"].getAgents) ?? []; //must do this. Convex thing. hate it.
+  const agentDocs = useQuery(api["customizeAgents/queries"].getAgents) ?? []; 
   const predefinedCharacters = agentDocs.map((doc) => ({
   id: doc._id,
   name: doc.name,
@@ -47,24 +43,13 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
   isCustom: true,
   }));
   const [isCreating, setIsCreating] = useState(false)
-  //const [isEditing, setIsEditing] = useState(false) // Deleted isEditing status
   const [editingCharacter, setEditingCharacter] = useState<Character | null>(null)
   const [showMultiSelectModal, setShowMultiSelectModal] = useState(false)
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>([])
   const [showSpriteModal, setShowSpriteModal] = useState(false)
-  //add delete confirmation
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  //add isDeleting status
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Note: In a real application, you would fetch characters from the backend when the component mounts
-  // useEffect(() => {
-  //   const loadCharacters = async () => {
-  //     const characters = await fetchCharacters()
-  //     // Update the state with fetched characters
-  //   }
-  //   loadCharacters()
-  // }, [])
 
   const handleImageUpload = () => {
     setShowSpriteModal(true)
@@ -80,22 +65,20 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     setShowSpriteModal(false)
   }
 
-  const createAgentMutation = useMutation(api["customizeAgents/mutations"].createAgent); //I want to mutate too. Damn.
-  const updateAgentMutation = useMutation(api["customizeAgents/mutations"].updateAgent); //doesn't like my docker environment. Hate it more.
-  const deleteAgentMutation = useMutation(api["customizeAgents/mutations"].deleteAgent); //add delete mutation
+  const createAgentMutation = useMutation(api["customizeAgents/mutations"].createAgent); 
+  const updateAgentMutation = useMutation(api["customizeAgents/mutations"].updateAgent); 
+  const deleteAgentMutation = useMutation(api["customizeAgents/mutations"].deleteAgent); 
   const selectAgentForWorldMutation = useMutation(api["customizeAgents/mutations"].selectAgentForWorld);
   
   
   const handleSave = async () => {
     if (!editingCharacter) return;
-  
-    //判断新建还是eedit
+
     const existing = agentDocs.find((doc) => doc._id.id === editingCharacter.id);
     if (!existing) {
-      // 新建
+      // create
       await createAgentMutation({
         name: editingCharacter.name,
-        //  还原成 "f*"()，目前用的predefined spritesheet template，改的粗
         character: editingCharacter.preview
           .replace("/sprites/", "")
           .replace(".png", ""),
@@ -118,7 +101,6 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     setIsDeleting(false);
     setIsCreating(false);
     setEditingCharacter(null);
-    // await updateDescriptions();
   };
   
 
@@ -185,42 +167,17 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
     </div>
   )
 
-  // const handleDeleteCharacter = () => {
-  //   if (selectedCharacter) {
-  //     setIsDeleting(true);
-  //     deleteAgentMutation.mutate(selectedCharacter, {
-  //       onSuccess: () => {
-  //         // ... 其他代码 ... 
-  //         // 删除成功后，更新预定义角色列表
-  //         console.log("Deleting character:", selectedCharacter);
-  //         // 删除成功后，更新预定义角色列表 
-  //         const updatedCharacters = predefinedCharacters.filter(
-  //           (char) => char.id !== selectedCharacter
-  //         );
-  //         // 更新预定义角色列表
-  //         predefinedCharacters.splice(0, predefinedCharacters.length, ...updatedCharacters);
-  //         setSelectedCharacter(null);
-  //         setIsDeleting(false);
-  //       },
-  //       onError: (error) => {
-  //         console.error("Error deleting character:", error);
-  //         setIsDeleting(false);
-  //       },
-  //     });
-  //   }
-  // };
 
   const handleDeleteCharacter = async () => {
     if (selectedCharacter) {
       try {
         setIsDeleting(true);
-        await deleteAgentMutation({ id: selectedCharacter });  // 直接调用，传入正确的参数
+        await deleteAgentMutation({ id: selectedCharacter }); 
         
         setSelectedCharacter(null);
         setShowDeleteConfirmation(false);
         setIsDeleting(false);
         
-        // 不需要手动更新 predefinedCharacters，因为 useQuery 会自动刷新
       } catch (error) {
         console.error("Error deleting character:", error);
         setIsDeleting(false);
@@ -366,12 +323,6 @@ export const EditCharacter: React.FC<EditCharacterProps> = ({
             setShowMultiSelectModal(false)
             setSelectedCharacters([])
           }}
-          // onSave={() => {
-          //   setShowMultiSelectModal(false)
-          //   // Here you would typically do something with the selected characters
-          //   console.log("Selected characters:", selectedCharacters)
-          // }}
-
           onSave={async () => {
             try {
               await selectAgentForWorldMutation({

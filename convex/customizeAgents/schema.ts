@@ -1,6 +1,5 @@
 import { defineSchema, defineTable} from "convex/server";
 import { v } from 'convex/values';
-import { characters } from "../../data/characters";
 
 export default defineSchema({
   agents: defineTable({

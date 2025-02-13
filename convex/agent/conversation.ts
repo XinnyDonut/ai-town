@@ -7,8 +7,6 @@ import { api, internal } from '../_generated/api';
 import * as embeddingsCache from './embeddingsCache';
 import { GameId, conversationId, playerId } from '../aiTown/ids';
 import { NUM_MEMORIES_TO_SEARCH } from '../constants';
-import { Game } from '../aiTown/game';
-import { insertInput } from '../aiTown/insertInput';
 
 const selfInternal = internal.agent.conversation;
 
@@ -93,6 +91,7 @@ function trimContentPrefx(content: string, prompt: string) {
   return content;
 }
 
+//added impression
 export async function continueConversationMessage(
   ctx: ActionCtx,
   worldId: Id<'worlds'>,
@@ -125,6 +124,7 @@ export async function continueConversationMessage(
   prompt.push(
     `Below is the current chat history between you and ${otherPlayer.name}.`,
     `DO NOT greet them again. Do NOT use the word "Hey" too often. Your response should be brief and within 200 characters.`,
+    //impression prompt
     `If your impression reaches -100, immediately end the conversation politely.`,
     `Your response should be brief and within 200 characters. End your response with the impression score on a new line.`
   );
@@ -157,14 +157,6 @@ export async function continueConversationMessage(
   });
 
 
-  // const { content } = await chatCompletion({
-  //   messages: llmMessages,
-  //   max_tokens: 300,
-  //   stop: stopWords(otherPlayer.name, player.name),
-  // });
-  // return trimContentPrefx(content, lastPrompt);
-
-
   const { content } = await chatCompletion({
     messages: llmMessages,
     max_tokens: 300,
@@ -176,16 +168,9 @@ export async function continueConversationMessage(
   const lastLine = lines[lines.length - 1];
   const impressionScore = parseInt(lastLine);
 
-  // 如果印象分达到 -100，生成告别消息
+ //impression score
   if (!isNaN(impressionScore) && impressionScore <= -100) {
 
-      //can't use this either.
-  //convex is really... a myth.
-  // await insertInput(ctx, worldId, 'leaveConversation', {
-  //   playerId: player.id,
-  //   conversationId: conversation.id
-  // });
-  
 
     const farewellMessages: LLMMessage[] = [
       {
@@ -193,31 +178,15 @@ export async function continueConversationMessage(
         content: `You are ${player.name} and need to politely end this conversation due to unacceptable behavior. Keep it brief.`
       }
     ];
-    
+    //force chat completion
     const farewell = await chatCompletion({
       messages: farewellMessages,
       max_tokens: 100,
       stop: stopWords(otherPlayer.name, player.name),
     });
-
-
-    // const farewell = await leaveConversationMessage(
-    //   ctx,
-    //   worldId,
-    //   conversationId,
-    //   playerId,
-    //   otherPlayerId
-    // );
-    // return farewell;
-
-    // // 结束对话
-    // conversation.leave(Game, Date.now(), player);
-    
-    // 返回告别消息
     return trimContentPrefx(farewell.content, lastPrompt);
   }
-
-  // 正常情况下返回原始回复
+  //otherwise talk normal
   return trimmedContent;
 }
   
@@ -248,8 +217,6 @@ export async function leaveConversationMessage(
     `Below is the current chat history between you and ${otherPlayer.name}.`,
     `How would you like to tell them that you're leaving? Your response should be brief and within 200 characters.`,
     `Rate your final impression of this interaction from -100 (extremely negative) to 100 (extremely positive). End your response with the impression score on a new line.`
-  //   //impression scores...
-  //   `Also rate your final impression of this interaction from -100 (extremely negative) to 100 (extremely positive). End your response with the impression score on a new line.`,
   );
   
   

@@ -1,12 +1,5 @@
-import { v } from 'convex/values';
 import { internal } from './_generated/api';
 import { DatabaseReader, MutationCtx, mutation } from './_generated/server';
-// import { Descriptions } from '../data/characters';
-// import * as map from '../data/maps/serene';
-// import * as map from '../data/maps/mage3';
-// import * as map from '../data/maps/gentleanim';
-// import * as map from '../data/maps/gentle';
-// import * as map from '../data/maps/phatasy2';
 import { insertInput } from './aiTown/insertInput';
 import { Id } from './_generated/dataModel';
 import { createEngine } from './aiTown/main';
@@ -14,70 +7,6 @@ import { ENGINE_ACTION_DURATION } from './constants';
 import { assertApiKey } from './util/llm';
 import { loadAvailableMaps,loadSelectedMapData } from './mapLoader';
 
-// const init = mutation({
-//   args: {
-//     numAgents: v.optional(v.number()),
-//     mapId:v.optional(v.string())
-//   },
-//   handler: async (ctx, args) => {
-//     console.log(`start to init the world...`)
-//     assertApiKey();
-
-//     //get agents from db
-//     const selectedAgentDoc = await ctx.db
-//     .query("selectedAgents")
-//     .order("desc")
-//     .first();
-  
-//   if (!selectedAgentDoc || !selectedAgentDoc.agentIds.length) {
-//     console.log("No agents selected for world initialization");
-//     return;
-//   }
-
-//   const selectedAgents = await Promise.all(
-//     selectedAgentDoc.agentIds.map(async (id: Id<"agents">) => {
-//       const agent = await ctx.db.get(id);
-//       if (!agent) {
-//         throw new Error(`Selected agent ${id} not found`);
-//       }
-//       return agent;
-//     })
-//   );
-
-//     //get the mapdata from the mapId
-//     const mapConfigObj = loadAvailableMaps();
-//     const chosenId = args.mapId||mapConfigObj.defaultMap;
-//     const mapdata = await loadSelectedMapData(chosenId);
-//     console.log(`${chosenId} was selected as the new map...`)
-    
-//     const { worldStatus, engine } = await getOrCreateDefaultWorld(ctx,mapdata);
-//     if (worldStatus.status !== 'running') {
-//       console.warn(
-//         `Engine ${engine._id} is not active! Run "npx convex run testing:resume" to restart it.`,
-//       );
-//       return;
-//     }
-//     const shouldCreate = await shouldCreateAgents(
-//       ctx.db,
-//       worldStatus.worldId,
-//       worldStatus.engineId,
-//     );
-//     if (shouldCreate) {
-//       for (const agent of selectedAgents) {
-//         console.log('Creating agent:', agent.name);
-        
-//         await insertInput(ctx, worldStatus.worldId, 'createAgent', {
-//           agent: {
-//             name: agent.name,
-//             character: agent.character,
-//             identity: agent.identity,
-//             plan: agent.plan
-//           }
-//         });
-//       }
-//     }
-//   },
-// });
 
 const init = mutation({
   handler: async (ctx, args) => {
@@ -85,7 +14,7 @@ const init = mutation({
     assertApiKey();
     
 
-    // 1. 先创建世界和加载地图
+    // 1. create world and load maps
     const mapConfigObj = loadAvailableMaps();
     const chosenId = args.mapId||mapConfigObj.defaultMap;
     const mapdata = await loadSelectedMapData(chosenId);
@@ -97,7 +26,7 @@ const init = mutation({
       return;
     }
 
-    // 2. 然后再处理 agents
+    // 2. then agents
     const shouldCreate = await shouldCreateAgents(
       ctx.db,
       worldStatus.worldId,
@@ -105,7 +34,7 @@ const init = mutation({
     );
 
     if (shouldCreate) {
-      // 3. 获取选中的 agents
+      // 3. get selected agents
       const selectedAgentDoc = await ctx.db
         .query("selectedAgents")
         .order("desc")
@@ -131,7 +60,7 @@ const init = mutation({
         })
       );
 
-      // 4. 创建选中的 agents
+      // 4. create selected agents
       for (const agent of selectedAgents) {
         console.log('Creating agent:', agent.name);
         await insertInput(ctx, worldStatus.worldId, 'createAgent', {
@@ -156,12 +85,6 @@ async function getOrCreateDefaultWorld(ctx: MutationCtx,mapdata:any) {
     .query('worldStatus')
     .filter((q) => q.eq(q.field('isDefault'), true))
     .unique();
-    
-  // if (worldStatus) {
-  //   const engine = (await ctx.db.get(worldStatus.engineId))!;
-  //   console.log(`world has already exist: engine: ${engine._id},worldStatus: ${worldStatus._id}`)
-  //   return { worldStatus, engine };
-  // }
 
     // if world exists stop current engine
     if (worldStatus) {

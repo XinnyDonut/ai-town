@@ -15,11 +15,12 @@ export const getAgents = query({
   },
 });
 
-export const getRecentTemplates = query({
-  handler:async (ctx) => {
-    return await ctx.db
-      .query<'agentTemplates'>('agentTemplates')
-      .order('desc')
-      .take(10)
-  }
-})
+// Agent template stuff by Xinxin. currently has bug. Waiting her to fix.
+// export const getRecentTemplates = query({
+//   handler:async (ctx) => {
+//     return await ctx.db
+//       .query<'agentTemplates'>('agentTemplates')
+//       .order('desc')
+//       .take(10)
+//   }
+// })

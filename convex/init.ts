@@ -1,6 +1,8 @@
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
 import { DatabaseReader, MutationCtx, mutation } from './_generated/server';
+// import { Descriptions } from '../data/characters';
+// import * as map from '../data/maps/serene';
 // import * as map from '../data/maps/mage3';
 // import * as map from '../data/maps/gentleanim';
 // import * as map from '../data/maps/gentle';
@@ -81,6 +83,7 @@ const init = mutation({
   handler: async (ctx, args) => {
     console.log(`start to init the world...`)
     assertApiKey();
+    
 
     // 1. 先创建世界和加载地图
     const mapConfigObj = loadAvailableMaps();
@@ -154,11 +157,32 @@ async function getOrCreateDefaultWorld(ctx: MutationCtx,mapdata:any) {
     .filter((q) => q.eq(q.field('isDefault'), true))
     .unique();
     
-  if (worldStatus) {
-    const engine = (await ctx.db.get(worldStatus.engineId))!;
-    console.log(`world has already exist: engine: ${engine._id},worldStatus: ${worldStatus._id}`)
-    return { worldStatus, engine };
-  }
+  // if (worldStatus) {
+  //   const engine = (await ctx.db.get(worldStatus.engineId))!;
+  //   console.log(`world has already exist: engine: ${engine._id},worldStatus: ${worldStatus._id}`)
+  //   return { worldStatus, engine };
+  // }
+
+    // if world exists stop current engine
+    if (worldStatus) {
+      // stop engine
+      const engine = (await ctx.db.get(worldStatus.engineId))!;
+      console.log(`Stopping existing engine: ${engine._id}`);
+      // clear it
+      await ctx.db.patch(worldStatus.engineId, {
+        generationNumber: 0,
+        status: 'stopped'
+      });
+      // make a new one
+      const newEngineId = await createEngine(ctx);
+      // update worldStatus
+      await ctx.db.patch(worldStatus._id, {
+        engineId: newEngineId,
+        status: 'running'
+      });
+      worldStatus = await ctx.db.get(worldStatus._id);
+      return { worldStatus, engine: await ctx.db.get(newEngineId) };
+    }
 
   const engineId = await createEngine(ctx);
   console.log(`engineId is ${engineId}`)
@@ -223,7 +247,10 @@ async function shouldCreateAgents(
     throw new Error(`Invalid world ID: ${worldId}`);
   }
   if (world.agents.length > 0) {
-    return false;
+    // clear current agents
+    world.agents = [];
+    world.conversations = [];
+    await ctx.db.replace(worldId, world);
   }
   // const unactionedJoinInputs = await db
   //   .query('inputs')

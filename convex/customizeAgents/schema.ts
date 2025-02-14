@@ -16,6 +16,7 @@ export default defineSchema({
 });
 
 //export this table to add to the main convex schema
+//XinXin
 export const agentTemplatesTable={
   agentTemplates:defineTable({
     name:v.string(),

@@ -116,6 +116,8 @@ export const agentInputs = {
       return null;
     },
   }),
+
+  // native static, incase needed.
   // createAgent: inputHandler({
   //   args: {
   //     descriptionIndex: v.number(),
@@ -152,9 +154,11 @@ export const agentInputs = {
   //     return { agentId };
   //   },
   // }),
+  
+  //YT's change
   createAgent: inputHandler({
     args: {
-      // 支持两种方式：通过 index 或直接传入 agent 信息
+      //Two ways: 1. index or directly inject agent data
       descriptionIndex: v.optional(v.number()),
       agent: v.optional(v.object({
         name: v.string(),
@@ -167,10 +171,10 @@ export const agentInputs = {
       let description;
       
       if (args.agent) {
-        // 如果直接传入了 agent 信息，使用它
+        // if injected, use it
         description = args.agent;
       } else if (args.descriptionIndex !== undefined && Descriptions.length > 0) {
-        // fallback 到使用 Descriptions 数组
+        // fallback to use Descriptions array
         description = Descriptions[args.descriptionIndex];
       } else {
         throw new Error('Either agent info or valid descriptionIndex must be provided');
